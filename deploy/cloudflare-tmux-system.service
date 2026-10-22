@@ -1,0 +1,16 @@
+[Unit]
+Description=cloudflare-tmux - tmux sessions in the browser (multi-user)
+After=network-online.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/cloudflare-tmux
+EnvironmentFile=/etc/cloudflare-tmux/env
+ExecStart=/opt/cloudflare-tmux/bin/node /opt/cloudflare-tmux/server.js
+Restart=always
+RestartSec=3
+# Stopping the web server must not kill users' tmux servers it started.
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

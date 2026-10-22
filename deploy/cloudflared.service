@@ -1,0 +1,11 @@
+[Unit]
+Description=Cloudflare Tunnel for cloudflare-tmux
+After=network-online.target
+
+[Service]
+ExecStart=__CLOUDFLARED__ tunnel --no-autoupdate run --token-file __HOME__/.cloudflared/cloudflare-tmux.token
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

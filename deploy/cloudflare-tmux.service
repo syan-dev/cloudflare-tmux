@@ -1,0 +1,15 @@
+[Unit]
+Description=cloudflare-tmux - tmux sessions in the browser
+After=network-online.target
+
+[Service]
+WorkingDirectory=__APP_DIR__
+ExecStart=__NODE__ __APP_DIR__/server.js
+Environment=PATH=__PATH__
+Restart=always
+RestartSec=3
+# Killing the web server must not kill the tmux server it may have started.
+KillMode=process
+
+[Install]
+WantedBy=default.target

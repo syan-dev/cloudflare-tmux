@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .anchor { @apply ml-2 text-slate-400 no-underline opacity-0 transition group-hover:opacity-100 hover:text-brand-500; }
+
+  /* Code blocks (highlight.js, GitHub-like palette in both themes) */
+  .prose pre { @apply relative my-6 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900; }
+  .prose pre code.hljs { @apply block bg-transparent p-4 text-[13px] leading-6 text-slate-800 dark:text-slate-200; }
+  .prose :not(pre) > code { @apply rounded-md bg-slate-100 px-1.5 py-0.5 text-[0.85em] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200; }
+  .copy-btn { @apply absolute right-2 top-2 rounded-md border border-slate-200 bg-white px-2 py-1 font-sans text-xs text-slate-500 opacity-0 transition hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white; }
+  .prose pre:hover .copy-btn, .copy-btn:focus { @apply opacity-100; }
+
+  .table-wrap { @apply my-6 overflow-x-auto; }
+  .table-wrap table { @apply my-0; }
+
+  /* Callouts: > [!NOTE] etc. */
+  .callout { @apply my-6 rounded-xl border-l-4 px-5 py-4; }
+  .callout-title { @apply mb-1 text-sm font-semibold; }
+  .callout-body > :first-child { @apply mt-0; }
+  .callout-body > :last-child { @apply mb-0; }
+  .callout-body a { @apply font-medium text-brand-600 no-underline hover:underline dark:text-brand-400; }
+  .callout-note { @apply border-sky-500 bg-sky-50 dark:bg-sky-500/10; }
+  .callout-note .callout-title { @apply text-sky-700 dark:text-sky-300; }
+  .callout-tip { @apply border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10; }
+  .callout-tip .callout-title { @apply text-emerald-700 dark:text-emerald-300; }
+  .callout-important { @apply border-violet-500 bg-violet-50 dark:bg-violet-500/10; }
+  .callout-important .callout-title { @apply text-violet-700 dark:text-violet-300; }
+  .callout-warning { @apply border-amber-500 bg-amber-50 dark:bg-amber-500/10; }
+  .callout-warning .callout-title { @apply text-amber-700 dark:text-amber-300; }
+  .callout-caution { @apply border-red-500 bg-red-50 dark:bg-red-500/10; }
+  .callout-caution .callout-title { @apply text-red-700 dark:text-red-300; }
+
+  .toc-active { @apply font-medium text-brand-600 dark:text-brand-400; }
+}
+
+/* highlight.js tokens */
+.hljs-comment, .hljs-quote { @apply italic text-slate-500; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-meta .hljs-keyword { @apply text-rose-600 dark:text-rose-400; }
+.hljs-string, .hljs-attr .hljs-string, .hljs-regexp { @apply text-emerald-700 dark:text-emerald-400; }
+.hljs-number, .hljs-literal, .hljs-symbol { @apply text-sky-700 dark:text-sky-400; }
+.hljs-title, .hljs-section, .hljs-title.function_ { @apply text-violet-700 dark:text-violet-400; }
+.hljs-variable, .hljs-template-variable, .hljs-attr, .hljs-attribute, .hljs-property { @apply text-amber-700 dark:text-amber-300; }
+.hljs-meta, .hljs-params { @apply text-slate-600 dark:text-slate-400; }

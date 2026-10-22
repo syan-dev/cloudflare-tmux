@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://syan-dev.github.io/cloudflare-tmux/
+    about: Setup guides and troubleshooting

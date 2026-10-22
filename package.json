@@ -1,0 +1,26 @@
+{
+  "name": "cloudflare-tmux",
+  "version": "0.1.0",
+  "description": "Persistent tmux sessions in your browser, behind Cloudflare Tunnel + Zero Trust Access",
+  "main": "server.js",
+  "license": "MIT",
+  "repository": "github:syan-dev/cloudflare-tmux",
+  "homepage": "https://syan-dev.github.io/cloudflare-tmux/",
+  "keywords": ["cloudflare", "cloudflare-tunnel", "cloudflare-access", "zero-trust", "tmux", "web-terminal", "xterm"],
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "express": "^4.22.3",
+    "jose": "^5.10.0",
+    "node-pty": "^1.1.0",
+    "ws": "^8.22.0"
+  }
+}

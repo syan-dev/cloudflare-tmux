@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1115">
+  <title>cloudflare-tmux</title>
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
+  <link rel="stylesheet" href="/style.css?v=3">
+</head>
+<body>
+  <section id="dashboard" hidden>
+    <header class="bar">
+      <h1>cloudflare-tmux</h1>
+      <span id="me" class="muted"></span>
+      <a id="logout-btn" class="btn" href="/cdn-cgi/access/logout">Log out</a>
+    </header>
+    <main class="wrap">
+      <form id="new-form" class="row">
+        <input id="new-name" placeholder="new session name" autocomplete="off"
+               pattern="[A-Za-z0-9_\-]{1,32}" maxlength="32" required>
+        <button type="submit" class="primary">New session</button>
+      </form>
+      <p id="error" class="error" hidden></p>
+      <ul id="sessions" class="sessions"></ul>
+      <p id="empty" class="muted" hidden>No sessions yet. Create one above.</p>
+    </main>
+  </section>
+
+  <section id="terminal-view" hidden>
+    <header class="bar term-bar">
+      <a href="#/" class="back" title="Back to sessions (session keeps running)">&larr; Sessions</a>
+      <span id="term-name" class="term-name"></span>
+      <span id="status" class="status"></span>
+    </header>
+    <div id="terminal"></div>
+    <nav id="keys" class="keys">
+      <button data-key="esc">Esc</button>
+      <button data-key="tab">Tab</button>
+      <button data-mod="ctrl" id="ctrl-btn">Ctrl</button>
+      <button data-key="prefix" title="tmux prefix (Ctrl-b)">^B</button>
+      <button data-key="up">&uarr;</button>
+      <button data-key="down">&darr;</button>
+      <button data-key="left">&larr;</button>
+      <button data-key="right">&rarr;</button>
+      <button data-key="|">|</button>
+      <button data-key="~">~</button>
+    </nav>
+  </section>
+
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/addon-fit/lib/addon-fit.js"></script>
+  <script src="/vendor/addon-web-links/lib/addon-web-links.js"></script>
+  <script src="/app.js?v=3"></script>
+</body>
+</html>
