@@ -12,6 +12,23 @@
   .copy-btn { @apply absolute right-2 top-2 rounded-md border border-slate-200 bg-white px-2 py-1 font-sans text-xs text-slate-500 opacity-0 transition hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white; }
   .prose pre:hover .copy-btn, .copy-btn:focus { @apply opacity-100; }
 
+  /* Diagrams in plain HTML: boxes in a row on wide screens, stacked on phones */
+  .diagram { @apply my-8 flex flex-col items-stretch gap-2 md:flex-row; }
+  .diagram-box { @apply flex-1 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400; }
+  .diagram-box-title { @apply mb-2 flex items-center gap-2 font-semibold text-slate-900 dark:text-white; }
+  .diagram-box ul { @apply m-0 space-y-1.5 p-0; }
+  .diagram-box li { @apply m-0 list-none rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/60; }
+  .diagram-box code { @apply whitespace-nowrap; }
+  .diagram-arrow { @apply flex flex-col items-center justify-center px-1 text-center text-xs text-slate-500 dark:text-slate-400 md:w-20; }
+  .diagram-arrow b { @apply text-lg leading-none text-brand-500; }
+  .diagram-caption { @apply -mt-4 mb-8 text-center text-sm text-slate-500 dark:text-slate-400; }
+  .badge { @apply inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white; }
+
+  /* Task lists (- [ ] item): the checkbox replaces the bullet */
+  .prose ul:has(> li > input[type="checkbox"]) { @apply list-none pl-0; }
+  .prose li:has(> input[type="checkbox"]) { @apply pl-0; }
+  .prose li > input[type="checkbox"] { @apply mr-2 accent-brand-500; }
+
   .table-wrap { @apply my-6 overflow-x-auto; }
   .table-wrap table { @apply my-0; }
 

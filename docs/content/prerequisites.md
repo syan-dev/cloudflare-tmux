@@ -1,59 +1,160 @@
 ---
 title: Prerequisites
-description: What you need on Cloudflare and on your server before installing cloudflare-tmux.
+description: The three things you need before installing cloudflare-tmux, how to check you have them, and how to get them.
 ---
 
 # Prerequisites
 
-## On Cloudflare
+You need **three things** before running the installer. Each takes a few minutes, and all of them work on
+free plans.
 
-### A domain (zone) on Cloudflare
+| | What | Why | Cost |
+|---|---|---|---|
+| <span class="badge">1</span> | [A domain on Cloudflare](#1-a-domain-on-cloudflare) | gives your terminal an address, like `term.example.com` | Cloudflare's Free plan is enough |
+| <span class="badge">2</span> | [Zero Trust turned on](#2-zero-trust-turned-on) | shows a login page before anyone reaches your server | free for up to 50 people |
+| <span class="badge">3</span> | [A Linux server](#3-a-linux-server) | where tmux and your sessions run | any machine you already have |
 
-The hostname you serve on (for example `term.example.com`) must be in a zone that uses Cloudflare as its DNS.
-Any plan works, including Free. The installer guesses the zone by dropping the first label of the hostname
-(`term.example.com` → `example.com`). If that's wrong, for example `term.dev.example.co.uk`, set `ZONE_NAME=example.co.uk`.
+Here's where each one fits:
 
-### Zero Trust enabled
+<div class="diagram not-prose">
+  <div class="diagram-box">
+    <p class="diagram-box-title">Your browser</p>
+    <ul>
+      <li>laptop or phone, anywhere</li>
+      <li>you sign in with Cloudflare</li>
+    </ul>
+  </div>
+  <div class="diagram-arrow"><b class="md:hidden">↓</b><b class="hidden md:block">→</b>HTTPS</div>
+  <div class="diagram-box">
+    <p class="diagram-box-title">Cloudflare</p>
+    <ul>
+      <li><span class="badge">1</span> your domain<br><code>term.example.com</code></li>
+      <li><span class="badge">2</span> Zero Trust<br>the login page</li>
+    </ul>
+  </div>
+  <div class="diagram-arrow"><b class="md:hidden">↑</b><b class="hidden md:block">←</b>tunnel, opened by your server</div>
+  <div class="diagram-box">
+    <p class="diagram-box-title"><span class="badge">3</span> Your Linux server</p>
+    <ul>
+      <li><code>cloudflared</code><br>the tunnel</li>
+      <li><code>cloudflare-tmux</code><br>the web app</li>
+      <li><code>tmux</code><br>your sessions</li>
+    </ul>
+  </div>
+</div>
+<p class="diagram-caption">Your server connects out to Cloudflare, so you don't open any ports or need a public IP.</p>
 
-1. In the [Cloudflare dashboard](https://dash.cloudflare.com), open **Zero Trust**.
-2. The first time, you'll be asked to pick a **team name**. This becomes your team domain:
-   `<team>.cloudflareaccess.com`.
-3. Choose the **Free** plan (up to 50 users). Cloudflare may ask for a payment method even for the Free plan.
+You don't create the tunnel, the login page settings or the DNS record yourself: the installer does that.
+You only need the three things above.
+
+## 1. A domain on Cloudflare
+
+Cloudflare must be in charge of DNS for a domain you own (Cloudflare calls this a **zone**). The terminal goes on
+a subdomain of it, such as `term.example.com`. You don't create that subdomain; the installer does.
+
+**Check if you already have it.** Open the [Cloudflare dashboard](https://dash.cloudflare.com). Your domain should
+be listed with the status **Active**. Or, from any terminal:
+
+```bash
+dig +short NS example.com
+# should print two names ending in .ns.cloudflare.com
+```
+
+**If you don't have it yet:**
+
+1. In the dashboard, choose **Add a domain**, type your domain, and pick the **Free** plan.
+2. Cloudflare shows you two nameservers. At the company you bought the domain from (your registrar), replace the
+   current nameservers with those two.
+3. Wait for the status to turn **Active**. It's often a few minutes, at most a day.
+
+Cloudflare's guide has the details: [Add a domain](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/).
 
 > [!NOTE]
-> The team domain is the address of the Cloudflare Access login page. The app checks that the JWTs it
-> receives were issued by exactly this domain.
+> The installer works out the zone by dropping the first part of your hostname: `term.example.com` → `example.com`.
+> That's wrong for hostnames like `term.dev.example.co.uk`. In that case, set `ZONE_NAME=example.co.uk` when you
+> run it.
 
-### A Cloudflare account for each person
+## 2. Zero Trust turned on
 
-Each person signs in with their own Cloudflare account (free) and must be a **member of your Cloudflare
-account**. Invite them with the **Minimal Account Access** role. You'll map each account's email to a Linux
-user. See [Cloudflare login](cloudflare/cloudflare-login.md).
+Zero Trust is the Cloudflare product that puts a login page in front of your terminal (its login part is
+called **Cloudflare Access**). You only turn it on once.
 
-## On your server
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com), open **Zero Trust** in the left sidebar.
+2. Pick a **team name**, for example your name or your company's. It becomes the address of your login page:
+   `<team>.cloudflareaccess.com`.
+3. Choose the **Free** plan. Cloudflare may ask for a payment method even for Free; you won't be charged.
 
-| Requirement | Why | Debian/Ubuntu | Fedora/RHEL |
-|---|---|---|---|
-| Linux with **systemd** | runs the app and tunnel as services | — | — |
-| **tmux** (3.2+ recommended) | the sessions themselves; 3.2+ is needed to copy from tmux to your browser clipboard | `apt install tmux` | `dnf install tmux` |
-| **Node.js 18+** and npm | runs the app | [nodejs.org](https://nodejs.org/) or [nvm](https://github.com/nvm-sh/nvm) | same |
-| **make, g++** (and python3) | builds `node-pty`, the native PTY module | `apt install build-essential python3` | `dnf install gcc-c++ make python3` |
-| **curl, python3** | used by the provisioning script | `apt install curl python3` | `dnf install curl python3` |
-| **cloudflared** | the tunnel connector | the installer can download it | same |
+**Already done?** If opening **Zero Trust** takes you straight to its dashboard, without asking for a team name,
+you're set.
 
-Supported architectures for the automatic `cloudflared` download: `amd64`, `arm64`, `arm` (Raspberry Pi works). The
-installer pins the latest release and checks its SHA-256 against both GitHub and Cloudflare's release notes
-before installing it to `~/.local/bin`.
-Otherwise, install it from [Cloudflare's downloads page](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
+## 3. A Linux server
+
+Any Linux machine with **systemd** that stays switched on: a cloud VPS, a home server, or a Raspberry Pi.
+It doesn't need a public IP address.
+
+Install these packages:
+
+```bash
+# Debian / Ubuntu
+sudo apt install tmux nodejs npm build-essential python3 curl
+
+# Fedora / RHEL
+sudo dnf install tmux nodejs npm gcc-c++ make python3 curl
+```
+
+Then check that Node.js is version **18 or newer**:
+
+```bash
+node -v    # v18.x or higher
+```
+
+If it's older (Ubuntu 22.04 ships v12), install a current one with [nvm](https://github.com/nvm-sh/nvm):
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+# open a new terminal, then:
+nvm install --lts
+```
+
+<details>
+<summary>What each package is for</summary>
+
+| Package | Used for |
+|---|---|
+| **tmux** | your sessions. Version 3.2 or newer lets you copy from tmux to your browser's clipboard. |
+| **Node.js 18+** and npm | runs the web app |
+| **make, g++, python3** | build `node-pty`, the part of the app that talks to the terminal |
+| **curl, python3** | used by the setup script to talk to Cloudflare |
+| **cloudflared** | keeps the tunnel to Cloudflare open. No need to install it: the installer offers to download it. |
+
+</details>
 
 > [!TIP]
-> You don't need a public IP, port forwarding, or firewall rules. The tunnel connects outbound to
-> Cloudflare on port 7844 (falling back to 443), so it works behind NAT, CGNAT, and most corporate networks.
+> Not sure you have everything? Just run the installer. Its first step checks each item and, if something is
+> missing, prints the exact command to install it.
+
+The installer downloads `cloudflared` for `amd64`, `arm64` and `arm` (Raspberry Pi), checks its SHA-256 against
+GitHub and Cloudflare's release notes, and puts it in `~/.local/bin`. On other machines, install it from
+[Cloudflare's downloads page](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
+
+## Who logs in
+
+To start, just **you**, with the Cloudflare account you used above. Nothing else to set up.
+
+Other people can be added later. Each needs their own free Cloudflare account, invited to yours as a member
+with the **Minimal Account Access** role. See [Cloudflare login](cloudflare/cloudflare-login.md).
 
 ## Single-user or multi-user?
 
-- **Single-user** (default): the app runs as *you*, as a systemd **user** service. Only emails mapped to
-  your own Linux user can open a terminal. No `sudo` needed (except possibly once for `loginctl enable-linger`).
-- **Multi-user** (`--multi-user`): the app runs as **root** from a root-owned copy in `/opt/cloudflare-tmux`
-  and starts each person's tmux as *their* Linux user. Use this when several people share a machine.
-  See [Multi-user install](install/multi-user.md).
+| Who uses it | Install | What happens |
+|---|---|---|
+| Just you, or people who share your Linux account | **single-user** (the default) | The app runs as you. No `sudo`, except perhaps once for `loginctl enable-linger`. |
+| Several people, each with **their own** Linux account | `--multi-user` | The app runs as root and opens each person's tmux as *their* Linux user. See [Multi-user install](install/multi-user.md). |
+
+## Ready?
+
+- [ ] Your domain shows **Active** in the Cloudflare dashboard
+- [ ] **Zero Trust** opens without asking for a team name
+- [ ] `tmux -V` works and `node -v` prints v18 or higher
+
+Then go to the [Quickstart](quickstart.md).
