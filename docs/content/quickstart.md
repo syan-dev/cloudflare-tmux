@@ -34,7 +34,7 @@ The installer asks for this token and saves it to `~/.cloudflare-token` with mod
 
 ## 3. Run the installer
 
-Start with just yourself. You'll add other people [later](#5-add-more-people-later).
+Start with just yourself. You'll add other people [later](#add-more-people).
 
 ```bash
 ./install.sh
@@ -63,11 +63,9 @@ Go to `https://term.example.com` and sign in with **your Cloudflare account**, t
 this up. You're already a member of your own account, so there's nothing to invite. Create a session and
 start working. Close the tab whenever you like; the session keeps running.
 
-> [!IMPORTANT]
-> Turn on two-factor authentication on your Cloudflare account. It's now the key to a shell on your server.
-> For an extra layer, require a [two-step code](two-step.md) in the app itself.
+## What's next
 
-## 5. Add more people (later)
+### Add more people
 
 Login is **Sign in with Cloudflare**, and only members of *your* Cloudflare account get through. To let
 someone else in:
@@ -84,7 +82,15 @@ someone else in:
    Mapping several people to your own Linux user means they share your sessions. To give each person
    their own Linux user, see [Multi-user install](install/multi-user.md).
 
-## What's next
+### Secure it
+
+Your Cloudflare account is now the key to a shell on your server.
+
+- **Turn on two-factor authentication** on your Cloudflare account, and ask everyone you invite to do the same.
+- For an extra layer, require a [two-step code](two-step.md) in the app itself.
+- Read the [Security model](security.md) to see what protects the terminal and how to harden it further.
+
+### More
 
 - Want to change something? Re-run `./install.sh` at any time; it's safe to re-run.
 - Something not working? See [Troubleshooting](troubleshooting.md).
