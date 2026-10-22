@@ -81,6 +81,11 @@ function loadEnvFile(file) {
   }
 }
 
+// A missing or unparseable Origin (e.g. "null") is not same-origin.
+function sameOrigin(req) {
+  try { return new URL(req.headers.origin).host === req.headers.host; } catch { return false; }
+}
+
 function getCookie(req, name) {
   const header = req.headers.cookie || '';
   for (const part of header.split(';')) {
@@ -244,8 +249,7 @@ app.use((req, res, next) => {
   });
   // State-changing requests must come from this site.
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    const origin = req.headers.origin;
-    if (!origin || new URL(origin).host !== req.headers.host) return res.status(403).json({ error: 'Bad origin' });
+    if (!sameOrigin(req)) return res.status(403).json({ error: 'Bad origin' });
   }
   next();
 });
@@ -330,8 +334,7 @@ server.on('upgrade', async (req, socket, head) => {
   if (url.pathname !== '/ws') return reject(404, 'Not Found');
 
   // Same-origin only: blocks cross-site WebSocket hijacking using the Access cookie.
-  const origin = req.headers.origin;
-  if (!origin || new URL(origin).host !== req.headers.host) return reject(403, 'Forbidden');
+  if (!sameOrigin(req)) return reject(403, 'Forbidden');
 
   let identity;
   try { identity = await authenticate(req); } catch (err) {

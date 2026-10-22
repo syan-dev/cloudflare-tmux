@@ -50,7 +50,6 @@ scripts/setup.sh
 |---|---|
 | `~/.config/cloudflare-tmux/env` | app config (`600`) |
 | `~/.cloudflared/cloudflare-tmux.token` | tunnel run token (`600`) |
-| `~/.cloudflare-token` | API token, only used by the setup scripts (`600`) |
 | `~/.config/systemd/user/cloudflare-tmux*.service` | units |
 
 The units run the code **from this checkout**. After `git pull`, run `scripts/setup.sh` again to restart.

@@ -51,8 +51,14 @@ The installer asks for a hostname (for example `term.example.com`), who may log 
 `you@example.com:youruser`, the email you sign in to Cloudflare with, then your Linux user. Then open
 `https://term.example.com` and sign in with your Cloudflare account.
 
+The API token is only for setup: delete it once this works, and create a short-lived one when you
+[change something on Cloudflare](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#when-you-need-it)
+(adding people, the hostname). Then go through the
+[security checklist](https://syan-dev.github.io/cloudflare-tmux/security.html#hardening-checklist).
+
 Later, to let others in, [invite them as members](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html)
-(Minimal Account Access) and re-run `./install.sh --identities you@example.com:you,friend@example.com:you`.
+(Minimal Account Access) and re-run `./install.sh --identities you@example.com:you,friend@example.com:you`
+(this needs a new API token: the setup one isn't saved).
 
 Without prompts:
 

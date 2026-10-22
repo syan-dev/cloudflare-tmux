@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Smaller API token**: *Access: Organizations, Identity Providers, and Groups* needs only **Read** (Edit
+  just to create the Cloudflare login method the first time). The token is no longer saved to
+  `~/.cloudflare-token` (or read from it): `install.sh` and `cloudflare.sh` ask for it when they need it and
+  keep it in memory for that run. The quickstart now ends with deleting the token in Cloudflare, since
+  nothing running uses it. Delete an existing `~/.cloudflare-token`.
+- **Security fixes**: a malformed `Origin` header on `/ws` could crash the server; the setup script no longer
+  puts the API token or the tunnel token on command lines (visible to other local users in `ps`).
+- **Security docs**: a step-by-step hardening checklist, what to do if an account or token is compromised, and
+  a table of exactly which tasks need the Cloudflare API token (most don't).
+- `ACCESS_SESSION` (default `24h`) sets how long a Cloudflare login lasts. It's saved in the config, so
+  re-running `cloudflare.sh` no longer resets a shorter value.
+- `scripts/install-cloudflared.sh [--restart]` installs or updates `cloudflared` with checksum checks and no API
+  token (the tunnel runs with `--no-autoupdate`).
+- `install.sh` verifies the SHA-256 of the downloaded `cloudflared` against the GitHub release and
+  Cloudflare's release notes before installing it.
 - **Login is now "Sign in with Cloudflare"**, restricted to members of your Cloudflare account. Google login
   and the Google OAuth setup are removed: invite each person as a member (Minimal Account Access) and map
   their Cloudflare account email in `IDENTITIES`.

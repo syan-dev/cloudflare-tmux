@@ -30,7 +30,7 @@ You (the account owner) are already a member. For everyone else:
 ## 2. Map the email to a Linux user
 
 Add `their-email:linux-user` to `IDENTITIES` in `~/.config/cloudflare-tmux/env`, then re-run the setup so the Access policy and the app
-agree:
+agree. This updates Cloudflare, so it needs an [API token](api-token.md#when-you-need-it):
 
 ```bash
 scripts/cloudflare.sh term.example.com
@@ -64,7 +64,9 @@ The Access application allows only this login method and redirects straight to i
 
 ## Removing a person
 
-1. Remove their entry from `IDENTITIES` and re-run `scripts/cloudflare.sh` (and `install-system.sh` in
-   multi-user mode). They're out of the Access policy and the app's allow-list.
-2. Optionally remove them under **Manage Account → Members**.
-3. If you use the two-step code: `scripts/totp.js remove their@email`.
+1. Remove their entry from `IDENTITIES` and restart the app (`systemctl --user restart cloudflare-tmux`,
+   or `install-system.sh` in multi-user mode). From then on the app refuses them, with no API token needed.
+2. Re-run `scripts/cloudflare.sh` with an [API token](api-token.md#when-you-need-it) to take them out of
+   the Access policy too.
+3. Optionally remove them under **Manage Account → Members**.
+4. If you use the two-step code: `scripts/totp.js remove their@email`.

@@ -83,6 +83,12 @@ sudo dnf install -y gcc-c++ make python3            # Fedora/RHEL
 - The guessed zone is wrong: set `ZONE_NAME=yourzone.tld`.
 - The token has no access to that zone: edit the token's **Zone Resources**.
 
+## `cloudflare.sh`: "The 'Cloudflare' login method doesn't exist yet"
+
+Your token has **Read** on *Access: Organizations, Identity Providers, and Groups*, which is enough except
+the first time. Add the login method once in the dashboard, or give the token Edit for one run. See
+[API token](cloudflare/api-token.md#if-the-login-method-is-missing).
+
 ## `cloudflare.sh`: "API error ... Authentication error"
 
 The token is missing a permission. Compare it with [API token](cloudflare/api-token.md). The failing call

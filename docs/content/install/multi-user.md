@@ -34,11 +34,12 @@ A root service must not run code that a normal user can edit. `scripts/install-s
 3. installs `/etc/systemd/system/cloudflare-tmux.service` and **disables the single-user app service** so they don't both claim port 7681.
 
 > [!IMPORTANT]
-> Editing the checkout doesn't change what's running. After changing code or `IDENTITIES`, run both scripts again:
+> Editing the checkout doesn't change what's running. After changing `IDENTITIES`, run both scripts again.
+> After changing only code, `install-system.sh` is enough.
 >
 > ```bash
-> scripts/cloudflare.sh term.example.com           # updates the Access allow-list
-> sudo NODE_BIN="$(command -v node)" scripts/install-system.sh
+> scripts/cloudflare.sh term.example.com                     # updates the Access allow-list (asks for the API token)
+> sudo NODE_BIN="$(command -v node)" scripts/install-system.sh                  # no token needed
 > ```
 
 `NODE_BIN` matters if you use nvm: `sudo` doesn't see your nvm `node`, so pass it explicitly.
@@ -49,4 +50,10 @@ A root service must not run code that a normal user can edit. `scripts/install-s
 2. Invite carol's Cloudflare account as a member of yours with **Minimal Account Access**
    ([Cloudflare login](../cloudflare/cloudflare-login.md)).
 3. Add or remove `carol@example.com:carol` in `IDENTITIES` in `~/.config/cloudflare-tmux/env`.
-4. Run the two commands above. Removing an email takes them out of the Access policy **and** the app's own allow-list.
+4. Create a short-lived [API token](../cloudflare/api-token.md). The one from setup wasn't saved, and
+   `cloudflare.sh` asks for it.
+5. Run the two commands above, then delete the token. Removing an email takes them out of the Access policy
+   **and** the app's own allow-list.
+
+**Removing someone in a hurry?** Skip the token: remove their entry, then run only `install-system.sh`. The app
+refuses them right away; tidy the Access policy with `cloudflare.sh` later.

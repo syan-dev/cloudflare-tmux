@@ -41,7 +41,9 @@ user. See [Cloudflare login](cloudflare/cloudflare-login.md).
 | **curl, python3** | used by the provisioning script | `apt install curl python3` | `dnf install curl python3` |
 | **cloudflared** | the tunnel connector | the installer can download it | same |
 
-Supported architectures for the automatic `cloudflared` download: `amd64`, `arm64`, `arm` (Raspberry Pi works).
+Supported architectures for the automatic `cloudflared` download: `amd64`, `arm64`, `arm` (Raspberry Pi works). The
+installer pins the latest release and checks its SHA-256 against both GitHub and Cloudflare's release notes
+before installing it to `~/.local/bin`.
 Otherwise, install it from [Cloudflare's downloads page](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
 
 > [!TIP]

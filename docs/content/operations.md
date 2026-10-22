@@ -53,17 +53,39 @@ scripts/setup.sh                                              # single-user
 sudo NODE_BIN="$(command -v node)" scripts/install-system.sh  # multi-user, after setup.sh
 ```
 
-Update `cloudflared` from time to time (the unit runs it with `--no-autoupdate`). Download a new binary
-over the old one, or use your package manager, then `systemctl --user restart cloudflare-tmux-cloudflared`.
+None of this needs the Cloudflare API token.
+
+### Updating `cloudflared`
+
+The tunnel unit runs `cloudflared` with `--no-autoupdate`, so update it yourself, for example monthly or
+when Cloudflare announces a security fix:
+
+```bash
+scripts/install-cloudflared.sh --restart
+```
+
+It downloads the latest release to `~/.local/bin/cloudflared`, checks its SHA-256 against GitHub and
+Cloudflare's release notes, and restarts the tunnel only if the binary changed. If your `cloudflared`
+comes from a package manager, update it there instead and run
+`systemctl --user restart cloudflare-tmux-cloudflared`. No API token needed.
 
 ## Changing who can log in
 
-Edit `IDENTITIES` in `~/.config/cloudflare-tmux/env`, then:
+Edit `IDENTITIES` in `~/.config/cloudflare-tmux/env`. Adding someone changes the Access policy on Cloudflare,
+so create a short-lived [API token](cloudflare/api-token.md) first (the setup token wasn't saved), then:
 
 ```bash
-scripts/cloudflare.sh term.example.com   # updates the Access policy
+scripts/cloudflare.sh term.example.com   # updates the Access policy (asks for the API token)
 scripts/setup.sh                         # or install-system.sh in multi-user mode
 ```
+
+**Removing someone in a hurry?** You don't need the token for that. Delete their entry from `IDENTITIES` and
+restart the app (`systemctl --user restart cloudflare-tmux`): it refuses them right away, even with a valid
+Cloudflare login. Clean up the Access policy later with a token. See
+[Security → If something goes wrong](security.md#if-something-goes-wrong).
+
+Changing only the Linux user of an email that's already listed doesn't touch Cloudflare, so a restart is
+enough there too. See [when you need the API token](cloudflare/api-token.md#when-you-need-it).
 
 ## Uninstall
 
@@ -80,7 +102,7 @@ scripts/setup.sh                         # or install-system.sh in multi-user mo
    sudo systemctl daemon-reload
    ```
 
-2. Remove local secrets: `rm ~/.cloudflared/cloudflare-tmux.token ~/.cloudflare-token`, and
+2. Remove local secrets: `rm -f ~/.cloudflared/cloudflare-tmux.token`, and
    `rm -r ~/.config/cloudflare-tmux` if you used the two-step code (`totp.json`).
 3. In the Cloudflare dashboard:
    - **DNS** → delete the `term` CNAME record (do this first, so the hostname stops resolving),

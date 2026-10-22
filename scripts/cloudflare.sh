@@ -6,11 +6,12 @@
 #   (email:linuxuser,...). The hostname and tunnel name are saved there, so re-runs reuse the same tunnel.
 # Login: "Sign in with Cloudflare", restricted to members of your Cloudflare account. Each allowed
 #   person needs their own Cloudflare account, invited as a member of yours (Minimal Account Access).
-# Needs an API token in $CF_API_TOKEN or ~/.cloudflare-token with:
+# Needs an API token (asked for when run, or $CF_API_TOKEN; never saved) with:
 #   Account: Cloudflare Tunnel: Edit, Account: Access: Apps and Policies: Edit,
-#   Account: Access: Organizations, Identity Providers, and Groups: Edit, Zone: DNS: Edit
+#   Account: Access: Organizations, Identity Providers, and Groups: Read, Zone: DNS: Edit (one zone).
+#   Edit instead of Read on the third is only needed if the Cloudflare login method doesn't exist yet.
 # Optional env: ZONE_NAME (default: hostname minus its first label), TUNNEL_NAME (default: saved, else
-#   cloudflare-tmux), PORT.
+#   cloudflare-tmux), PORT, ACCESS_SESSION (Access login lifetime, e.g. 8h; default: saved, else 24h).
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,23 +24,27 @@ ZONE_NAME="${ZONE_NAME:-${HOST#*.}}"
 TUNNEL_NAME="${TUNNEL_NAME:-$(env_get TUNNEL_NAME)}"
 TUNNEL_NAME="${TUNNEL_NAME:-cloudflare-tmux}"
 PORT="${PORT:-7681}"
+ACCESS_SESSION="${ACCESS_SESSION:-$(env_get ACCESS_SESSION)}"
+ACCESS_SESSION="${ACCESS_SESSION:-24h}"
+[[ "$ACCESS_SESSION" =~ ^[0-9]+(m|h)$ ]] || { echo "ACCESS_SESSION must look like 30m or 8h"; exit 1; }
 API=https://api.cloudflare.com/client/v4
 if [ -n "${CF_API_TOKEN:-}" ]; then TOKEN="$CF_API_TOKEN"
-elif [ -s "$HOME/.cloudflare-token" ]; then TOKEN="$(tr -d '[:space:]' < "$HOME/.cloudflare-token")"
-else echo "No API token: set CF_API_TOKEN or save it to ~/.cloudflare-token (chmod 600)"; exit 1; fi
+elif [ -t 0 ]; then read -r -s -p "Cloudflare API token (not saved): " TOKEN; echo
+else echo "No API token: run interactively, or set CF_API_TOKEN (see docs/content/cloudflare/api-token.md)"; exit 1; fi
+[ -n "$TOKEN" ] || { echo "Token is required"; exit 1; }
+[ -e "$HOME/.cloudflare-token" ] && echo "  note: ~/.cloudflare-token is no longer used; delete it: rm ~/.cloudflare-token"
 IDENTITIES="$(env_get IDENTITIES)"
 [ -n "$IDENTITIES" ] || { echo "Set IDENTITIES=email:linuxuser,... in $ENV_FILE"; exit 1; }
 EMAILS_JSON="$(python3 -c 'import sys,json
 print(json.dumps([{"email":{"email":e.rsplit(":",1)[0].strip().lower()}} for e in sys.argv[1].split(",") if e.strip()]))' "$IDENTITIES")"
 
 cf() {  # cf METHOD PATH [JSON]; prints .result, exits on API error
-  local out
-  out="$(curl -sS -X "$1" -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    "$API$2" ${3:+--data "$3"})"
-  python3 -c 'import sys,json
-d=json.loads(sys.argv[1])
+  # Token and responses (which include the tunnel token) stay off argv, where any local user could see them in ps.
+  curl -sS -X "$1" -H @<(printf 'Authorization: Bearer %s\n' "$TOKEN") -H 'Content-Type: application/json' \
+    "$API$2" ${3:+--data "$3"} | python3 -c 'import sys,json
+d=json.load(sys.stdin)
 if not d.get("success"): sys.exit("API error on '"$1 $2"': %s" % d.get("errors"))
-print(json.dumps(d.get("result")))' "$out"
+print(json.dumps(d.get("result")))'
 }
 jq_() { python3 -c "import sys,json; r=json.load(sys.stdin); print($1)"; }
 
@@ -62,8 +67,15 @@ echo "tunnel $TUNNEL_NAME=$TUNNEL_ID"
 # 2. Cloudflare login (identity provider type "cloudflare"), only for members of this account
 IDP_ID="$(cf GET "/accounts/$ACCOUNT_ID/access/identity_providers" | jq_ "next((i['id'] for i in r if i['type']=='cloudflare'), '')")"
 if [ -z "$IDP_ID" ]; then
-  IDP_ID="$(cf POST "/accounts/$ACCOUNT_ID/access/identity_providers" \
-    '{"name":"Cloudflare","type":"cloudflare","config":{"restrict_to_account_members":true}}' | jq_ 'r["id"]')"
+  # Creating it is the only call that needs Edit on Identity Providers; Read covers every re-run.
+  if ! IDP_ID="$(cf POST "/accounts/$ACCOUNT_ID/access/identity_providers" \
+    '{"name":"Cloudflare","type":"cloudflare","config":{"restrict_to_account_members":true}}' | jq_ 'r["id"]')"; then
+    echo "  The 'Cloudflare' login method doesn't exist yet and this token can't create it. Either:"
+    echo "  - add it once in Zero Trust > Settings > Authentication > Login methods (turn on"
+    echo "    'restrict to account members'), then re-run, or"
+    echo "  - give the token Edit on 'Access: Organizations, Identity Providers, and Groups' for this run."
+    exit 1
+  fi
 elif [ "$(cf GET "/accounts/$ACCOUNT_ID/access/identity_providers/$IDP_ID" | jq_ "r.get('config',{}).get('restrict_to_account_members')")" != True ]; then
   echo "  warning: Cloudflare login is not restricted to account members."
   echo "  Turn on 'restrict to account members' in Zero Trust > Settings > Authentication > Cloudflare."
@@ -75,7 +87,7 @@ echo "cloudflare login idp=$IDP_ID"
 TEAM_DOMAIN="$(cf GET "/accounts/$ACCOUNT_ID/access/organizations" | jq_ 'r["auth_domain"]')"
 APP_ID="$(cf GET "/accounts/$ACCOUNT_ID/access/apps" | jq_ "next((a['id'] for a in r if a.get('domain')=='$HOST'), '')")"
 POLICY="{\"name\":\"Mapped Cloudflare accounts\",\"decision\":\"allow\",\"include\":$EMAILS_JSON}"
-APP_BODY="{\"name\":\"cloudflare-tmux\",\"type\":\"self_hosted\",\"domain\":\"$HOST\",\"session_duration\":\"24h\",
+APP_BODY="{\"name\":\"cloudflare-tmux\",\"type\":\"self_hosted\",\"domain\":\"$HOST\",\"session_duration\":\"$ACCESS_SESSION\",
   \"allowed_idps\":[\"$IDP_ID\"],\"auto_redirect_to_identity\":true,
   \"app_launcher_visible\":true,\"http_only_cookie_attribute\":true,
   \"same_site_cookie_attribute\":\"lax\",\"policies\":[$POLICY]}"
@@ -99,6 +111,7 @@ echo "dns $HOST -> $TARGET"
 env_set PUBLIC_HOST "$HOST"
 env_set TUNNEL_NAME "$TUNNEL_NAME"
 env_set PORT "$PORT"
+env_set ACCESS_SESSION "$ACCESS_SESSION"
 env_set CF_TEAM_DOMAIN "$TEAM_DOMAIN"
 env_set CF_ACCESS_AUD "$AUD"
 echo "wrote $ENV_FILE"

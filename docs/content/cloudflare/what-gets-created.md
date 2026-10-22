@@ -39,7 +39,7 @@ A **self-hosted** Access application for the hostname:
 | Domain | `term.example.com` | the whole hostname is protected |
 | Login methods | Cloudflare login only | one login method, no one-time PIN codes |
 | Instant auth (`auto_redirect_to_identity`) | on | goes straight to the Cloudflare sign-in |
-| Session duration | 24h | how often you sign in again |
+| Session duration | `ACCESS_SESSION` (default 24h) | how often you sign in again |
 | Cookie | `HttpOnly`, `SameSite=Lax` | the token isn't readable by page scripts |
 | Policy "Mapped Cloudflare accounts" | **Allow**, include = each email in `IDENTITIES` | only listed people get in |
 

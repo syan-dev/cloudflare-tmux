@@ -27,10 +27,17 @@ Go to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profi
 |---|---|---|
 | Account | Cloudflare Tunnel | Edit |
 | Account | Access: Apps and Policies | Edit |
-| Account | Access: Organizations, Identity Providers, and Groups | Edit |
+| Account | Access: Organizations, Identity Providers, and Groups | Read |
 | Zone | DNS | Edit (only the zone you'll use) |
 
-The installer asks for this token and saves it to `~/.cloudflare-token` with mode `600`. See [API token](cloudflare/api-token.md) for why each permission is needed.
+Set an **expiry** (a day is plenty): the token is only used during setup. The installer asks for it and
+keeps it in memory for that run; it isn't saved to disk. See [API token](cloudflare/api-token.md) for why
+each permission is needed and how to narrow the token further.
+
+> [!NOTE]
+> If you've never used "Sign in with Cloudflare" in Zero Trust, the script has to create that login
+> method, which needs **Edit** on the third permission. It tells you if so. See
+> [API token](cloudflare/api-token.md#if-the-login-method-is-missing).
 
 ## 3. Run the installer
 
@@ -63,6 +70,18 @@ Go to `https://term.example.com` and sign in with **your Cloudflare account**, t
 this up. You're already a member of your own account, so there's nothing to invite. Create a session and
 start working. Close the tab whenever you like; the session keeps running.
 
+## 5. Delete the API token
+
+Once it works, delete the token at
+[dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) (**⋯ → Delete**).
+Nothing that's running uses it: the tunnel has its own token, and the Access app and DNS record live on
+Cloudflare's side. Day-to-day use, updates, restarts and the two-step code never need it. You only need a new one to
+change what's on Cloudflare: adding people, the hostname, or the login lifetime. The full list is in
+[when you need the API token](cloudflare/api-token.md#when-you-need-it). Then create a new token with the
+same permissions, and delete it again afterwards.
+
+Next, work through the [security checklist](security.md#hardening-checklist). It takes about ten minutes.
+
 ## What's next
 
 ### Add more people
@@ -72,7 +91,9 @@ someone else in:
 
 1. **Invite them:** **Manage Account → Members → Invite**, role **Minimal Account Access**. They accept the
    invitation from their own Cloudflare account. See [Cloudflare login](cloudflare/cloudflare-login.md).
-2. **Map them** by re-running the installer with everyone listed:
+2. **Create a short-lived API token** with the [same permissions](#2-create-a-cloudflare-api-token). The
+   one from setup wasn't saved, and adding someone changes the Access allow-list on Cloudflare.
+3. **Map them** by re-running the installer with everyone listed. It asks for the token:
 
    ```bash
    ./install.sh --identities you@example.com:$USER,friend@example.com:$USER
@@ -81,6 +102,10 @@ someone else in:
    This updates the Access allow-list and restarts the app; your tmux sessions keep running.
    Mapping several people to your own Linux user means they share your sessions. To give each person
    their own Linux user, see [Multi-user install](install/multi-user.md).
+4. **Delete the token** again ([step 5](#5-delete-the-api-token)).
+
+Removing someone doesn't need a token to take effect: see
+[Changing who can log in](operations.md#changing-who-can-log-in).
 
 ### Secure it
 

@@ -10,7 +10,6 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=scripts/config.sh
 . "$APP_DIR/scripts/config.sh"
-TOKEN_FILE="$HOME/.cloudflare-token"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
 dl="" token=""
 
@@ -68,15 +67,9 @@ if [ -x "$CLOUDFLARED" ]; then
   ok "cloudflared ($CLOUDFLARED)"
 else
   bad "cloudflared"
-  case "$(uname -m)" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; armv7l) arch=arm ;; *) arch="" ;; esac
-  [ -n "$arch" ] || { echo "Install cloudflared manually: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"; exit 1; }
   ask dl "Download the official cloudflared binary to ~/.local/bin? (y/n)" y
   [ "$dl" = y ] || { echo "Install cloudflared, then re-run."; exit 1; }
-  mkdir -p "$HOME/.local/bin"
-  curl -fsSL -o "$HOME/.local/bin/cloudflared" \
-    "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$arch"
-  chmod +x "$HOME/.local/bin/cloudflared"
-  ok "cloudflared installed to ~/.local/bin/cloudflared"
+  "$APP_DIR/scripts/install-cloudflared.sh"
 fi
 
 # ---------- 2. configuration ----------
@@ -108,18 +101,18 @@ fi
 
 if [ -n "${CF_API_TOKEN:-}" ]; then
   ok "API token from \$CF_API_TOKEN"
-elif [ -s "$TOKEN_FILE" ]; then
-  ok "API token from $TOKEN_FILE"
 else
+  [ -n "$(env_get CF_ACCESS_AUD)" ] && echo "  The token from your first install wasn't saved. Create a new short-lived one."
   echo "  Create a token at https://dash.cloudflare.com/profile/api-tokens with:"
   echo "    Account · Cloudflare Tunnel · Edit"
   echo "    Account · Access: Apps and Policies · Edit"
-  echo "    Account · Access: Organizations, Identity Providers, and Groups · Edit"
+  echo "    Account · Access: Organizations, Identity Providers, and Groups · Read"
   echo "    Zone · DNS · Edit (your zone)"
   ask_secret token "Paste the Cloudflare API token"
   [ -n "$token" ] || { echo "Token is required"; exit 1; }
-  (umask 077; printf '%s\n' "$token" > "$TOKEN_FILE")
-  ok "saved to $TOKEN_FILE"
+  # Kept in memory for this run only; nothing is written to disk.
+  export CF_API_TOKEN="$token"
+  ok "API token accepted (not saved; you'll be asked again on a re-run)"
 fi
 
 echo "  Login is 'Sign in with Cloudflare': everyone in IDENTITIES needs their own Cloudflare account,"
@@ -129,6 +122,7 @@ echo "  See https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-log
 # ---------- 3. Cloudflare ----------
 bold "3/4 Provisioning Cloudflare (tunnel, Cloudflare login, Access app, DNS)"
 "$APP_DIR/scripts/cloudflare.sh" "$HOST"
+unset CF_API_TOKEN token  # not needed by the services
 
 # ---------- 4. services ----------
 bold "4/4 Installing services"
@@ -142,6 +136,7 @@ fi
 
 echo
 bold "Done. Open https://$HOST"
+echo "  Then delete the API token at https://dash.cloudflare.com/profile/api-tokens; nothing running uses it."
 if [ "$MULTI_USER" -eq 1 ]; then
   echo "  Status: systemctl status cloudflare-tmux; systemctl --user status cloudflare-tmux-cloudflared"
   echo "  Logs:   journalctl -u cloudflare-tmux -f"
