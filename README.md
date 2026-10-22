@@ -46,10 +46,13 @@ cd cloudflare-tmux
 ./install.sh
 ```
 
-The installer asks for a hostname (for example `term.example.com`), who may log in (`you@example.com:youruser`: a Cloudflare account email, then a Linux user), and a
-[Cloudflare API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html). Other people sign in with their own Cloudflare
-account: [invite them as members](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html) with Minimal Account Access.
-Then open `https://term.example.com`.
+The installer asks for a hostname (for example `term.example.com`), who may log in, and a
+[Cloudflare API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html). Start with yourself:
+`you@example.com:youruser`, the email you sign in to Cloudflare with, then your Linux user. Then open
+`https://term.example.com` and sign in with your Cloudflare account.
+
+Later, to let others in, [invite them as members](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html)
+(Minimal Account Access) and re-run `./install.sh --identities you@example.com:you,friend@example.com:you`.
 
 Without prompts:
 

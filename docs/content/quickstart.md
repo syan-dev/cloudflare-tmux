@@ -32,14 +32,9 @@ Go to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profi
 
 The installer asks for this token and saves it to `~/.cloudflare-token` with mode `600`. See [API token](cloudflare/api-token.md) for why each permission is needed.
 
-## 3. Invite the people who'll log in
+## 3. Run the installer
 
-Login is **Sign in with Cloudflare**: each person signs in with their own Cloudflare account, and only
-members of *your* Cloudflare account get through. You're already a member. For anyone else, go to
-**Manage Account → Members → Invite** and give them the **Minimal Account Access** role. They accept the
-invitation from their own Cloudflare account. See [Cloudflare login](cloudflare/cloudflare-login.md).
-
-## 4. Run the installer
+Start with just yourself. You'll add other people [later](#5-add-more-people-later).
 
 ```bash
 ./install.sh
@@ -48,8 +43,8 @@ invitation from their own Cloudflare account. See [Cloudflare login](cloudflare/
 It will:
 
 1. check prerequisites and offer to download `cloudflared` if it's missing,
-2. ask for the **hostname** (for example `term.example.com`) and **who may log in**
-   (`you@example.com:youruser`: the email of a Cloudflare account, then your Linux username),
+2. ask for the **hostname** (for example `term.example.com`) and **who may log in**. Enter
+   `you@example.com:youruser`: the email you sign in to Cloudflare with, then your Linux username,
 3. ask for the API token,
 4. create the tunnel, Cloudflare login, Access application and DNS record ([details](cloudflare/what-gets-created.md)),
 5. install and start two systemd user services: the app and the tunnel.
@@ -59,20 +54,37 @@ To run without prompts (for scripts or provisioning tools):
 ```bash
 CF_API_TOKEN=... ./install.sh --yes \
   --host term.example.com \
-  --identities you@example.com:youruser
+  --identities you@example.com:$USER
 ```
 
-## 5. Open it
+## 4. Open it
 
-Go to `https://term.example.com`, sign in with your Cloudflare account, create a session and start working. Close the tab
-whenever you like; the session keeps running.
+Go to `https://term.example.com` and sign in with **your Cloudflare account**, the same one you used to set
+this up. You're already a member of your own account, so there's nothing to invite. Create a session and
+start working. Close the tab whenever you like; the session keeps running.
 
 > [!IMPORTANT]
-> Turn on two-factor authentication for every Cloudflare account you allow. That account is now the key to a shell on your server.
+> Turn on two-factor authentication on your Cloudflare account. It's now the key to a shell on your server.
 > For an extra layer, require a [two-step code](two-step.md) in the app itself.
+
+## 5. Add more people (later)
+
+Login is **Sign in with Cloudflare**, and only members of *your* Cloudflare account get through. To let
+someone else in:
+
+1. **Invite them:** **Manage Account → Members → Invite**, role **Minimal Account Access**. They accept the
+   invitation from their own Cloudflare account. See [Cloudflare login](cloudflare/cloudflare-login.md).
+2. **Map them** by re-running the installer with everyone listed:
+
+   ```bash
+   ./install.sh --identities you@example.com:$USER,friend@example.com:$USER
+   ```
+
+   This updates the Access allow-list and restarts the app; your tmux sessions keep running.
+   Mapping several people to your own Linux user means they share your sessions. To give each person
+   their own Linux user, see [Multi-user install](install/multi-user.md).
 
 ## What's next
 
-- Other people, each with their own Linux user? See [Multi-user install](install/multi-user.md).
 - Want to change something? Re-run `./install.sh` at any time; it's safe to re-run.
 - Something not working? See [Troubleshooting](troubleshooting.md).
