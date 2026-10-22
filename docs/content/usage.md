@@ -23,6 +23,22 @@ Sessions are also linkable: `https://term.example.com/#/s/work` opens (or create
   If your Access session has expired, it reloads so you can sign in again.
 - Several tabs or devices can attach to the same session at once. They all see the same screen, which is handy for pair work.
 
+## Copy and paste
+
+| Action | How |
+|---|---|
+| Copy with tmux (works with `mouse on`) | drag to select, release; or `Ctrl-b [`, select, `Enter`. The text goes to your computer's clipboard. |
+| Copy a browser selection | hold **Shift** (Mac: **Option**) while dragging, then **Ctrl+Shift+C** (Mac: **Cmd+C**) |
+| Paste | **Ctrl+Shift+V** (Mac: **Cmd+V**), or right-click → Paste |
+
+Plain **Ctrl+C** always sends `^C` to the program.
+
+tmux copies reach the browser through the OSC 52 escape sequence. The app turns this on for its own tmux client
+(`-T clipboard`) and sets tmux's `set-clipboard` option to `on`, which also lets programs inside tmux (vim,
+neovim, …) copy to your clipboard. Copying only goes one way: programs in the terminal can never read your
+clipboard. This needs tmux 3.2 or newer. Browsers only allow clipboard access over HTTPS,
+which Cloudflare provides.
+
 ## Mobile key bar
 
 On touch devices a key bar appears under the terminal:

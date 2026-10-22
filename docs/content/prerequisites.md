@@ -33,7 +33,7 @@ Each person signs in with a Google account (Gmail or Google Workspace). You'll m
 | Requirement | Why | Debian/Ubuntu | Fedora/RHEL |
 |---|---|---|---|
 | Linux with **systemd** | runs the app and tunnel as services | — | — |
-| **tmux** | the sessions themselves | `apt install tmux` | `dnf install tmux` |
+| **tmux** (3.2+ recommended) | the sessions themselves; 3.2+ is needed to copy from tmux to your browser clipboard | `apt install tmux` | `dnf install tmux` |
 | **Node.js 18+** and npm | runs the app | [nodejs.org](https://nodejs.org/) or [nvm](https://github.com/nvm-sh/nvm) | same |
 | **make, g++** (and python3) | builds `node-pty`, the native PTY module | `apt install build-essential python3` | `dnf install gcc-c++ make python3` |
 | **curl, python3** | used by the provisioning script | `apt install curl python3` | `dnf install curl python3` |

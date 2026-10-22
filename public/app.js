@@ -134,6 +134,25 @@ function sendInput(data) {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
 }
 
+// Ctrl+Shift+C / Cmd+C copy the selection; Ctrl+Shift+V pastes. Plain Ctrl+C stays ^C.
+function clipboardKeys(e) {
+  if (e.type !== 'keydown') return true;
+  const key = e.key.toLowerCase();
+  const ctrlShift = e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey;
+  if ((ctrlShift || (e.metaKey && !e.ctrlKey)) && key === 'c') {
+    if (term.hasSelection()) {
+      navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
+      term.clearSelection();
+    }
+    // Keep Ctrl+Shift+C from opening DevTools.
+    if (ctrlShift) e.preventDefault();
+    return false;
+  }
+  // Let the browser fire a paste event, which xterm handles.
+  if (ctrlShift && key === 'v') return false;
+  return true;
+}
+
 function ensureTerminal() {
   if (term) return;
   term = new Terminal({
@@ -146,6 +165,13 @@ function ensureTerminal() {
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.loadAddon(new WebLinksAddon.WebLinksAddon());
+  // OSC 52: tmux (and vim, etc.) can write to the browser clipboard, but never read it.
+  // Any selection counts: tmux < 3.3 sends an empty one, which the default provider ignores.
+  term.loadAddon(new ClipboardAddon.ClipboardAddon(undefined, {
+    readText: () => '',
+    writeText: (_sel, text) => navigator.clipboard?.writeText(text).catch(() => {}),
+  }));
+  term.attachCustomKeyEventHandler(clipboardKeys);
   term.open($('terminal'));
   term.onData((data) => {
     if (ctrlArmed && data.length === 1) {

@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
-const { execFile } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
@@ -47,6 +47,15 @@ if (!AUTH_DISABLED && (!TEAM_DOMAIN || !ACCESS_AUD || IDENTITIES.size === 0)) {
 }
 
 const jwks = AUTH_DISABLED ? null : createRemoteJWKSet(new URL(`https://${TEAM_DOMAIN}/cdn-cgi/access/certs`));
+
+// tmux >= 3.2 can send copies to the browser clipboard (OSC 52) via `-T clipboard`.
+const TMUX_CLIPBOARD = (() => {
+  try {
+    const m = execFileSync('tmux', ['-V'], { timeout: 5000 }).toString().match(/(\d+)\.(\d+)/);
+    return !!m && (+m[1] > 3 || (+m[1] === 3 && +m[2] >= 2));
+  } catch { return false; }
+})();
+if (!TMUX_CLIPBOARD) console.warn('tmux < 3.2: copying from tmux to the browser clipboard is disabled');
 
 function loadEnvFile(file) {
   let text;
@@ -222,6 +231,7 @@ const xtermDir = path.join(__dirname, 'node_modules', '@xterm');
 app.use('/vendor/xterm', express.static(path.join(xtermDir, 'xterm'), staticOpts));
 app.use('/vendor/addon-fit', express.static(path.join(xtermDir, 'addon-fit'), staticOpts));
 app.use('/vendor/addon-web-links', express.static(path.join(xtermDir, 'addon-web-links'), staticOpts));
+app.use('/vendor/addon-clipboard', express.static(path.join(xtermDir, 'addon-clipboard'), staticOpts));
 app.use(express.static(path.join(__dirname, 'public'), staticOpts));
 
 // ---------- WebSocket terminal ----------
@@ -257,7 +267,10 @@ function attach(ws, name, { email, account }, url) {
   const rows = Math.min(Math.max(+url.searchParams.get('rows') || 24, 5), 200);
 
   // -A attaches if the session exists, otherwise creates it.
-  const cmd = tmuxCommand(account, ['new-session', '-A', '-s', name, '-c', account.home]);
+  let args = ['new-session', '-A', '-s', name, '-c', account.home];
+  // Mark this client as clipboard-capable so tmux copies reach the browser as OSC 52.
+  if (TMUX_CLIPBOARD) args = ['-T', 'clipboard', ...args, ';', 'set', '-s', 'set-clipboard', 'on'];
+  const cmd = tmuxCommand(account, args);
   const term = pty.spawn(cmd.file, cmd.args, { name: 'xterm-256color', cols, rows, cwd: cmd.cwd, env: cmd.env });
   console.log(`attach ${account.name}/${name} by ${email} (pid ${term.pid})`);
 
