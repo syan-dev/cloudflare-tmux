@@ -21,9 +21,10 @@ async function api(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
     credentials: 'same-origin',
   });
-  if (res.status === 401) { location.reload(); throw new Error('Session expired, re-authenticating'); }
+  if (res.status === 401 && path !== '/api/2fa') { location.reload(); throw new Error('Session expired, re-authenticating'); }
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
+    if (data.twofa) { me.twofa = 'needed'; route(); }
     throw new Error(data.error || `${res.status} ${res.statusText}`);
   }
   return res.status === 204 ? null : res.json();
@@ -210,7 +211,9 @@ function connect(name) {
     setStatus(`disconnected, retrying in ${Math.round(reconnectDelay / 1000)}s`, 'bad');
     reconnectTimer = setTimeout(async () => {
       // A 401 on the upgrade means the Access session expired: reload to log in again.
-      try { await api('GET', '/api/me'); } catch { return; }
+      // An expired two-step session also refuses the upgrade: ask for a code again.
+      try { me = await api('GET', '/api/me'); } catch { return; }
+      if (me.twofa === 'needed' || me.twofa === 'not-enrolled') return route();
       if (currentSession === name) connect(name);
     }, reconnectDelay);
     reconnectDelay = Math.min(reconnectDelay * 2, 15000);
@@ -254,13 +257,42 @@ $('keys').addEventListener('click', (e) => {
   term && term.focus();
 });
 
+// ---------- second step ----------
+
+function showTwofa() {
+  closeSession();
+  showView('twofa');
+  $('twofa-me').textContent = me.email;
+  const enrolled = me.twofa !== 'not-enrolled';
+  $('twofa-form').hidden = !enrolled;
+  $('twofa-error').hidden = enrolled;
+  if (!enrolled) $('twofa-error').textContent = `No authenticator is set up for ${me.email}. Ask the admin to run: scripts/totp.js add ${me.email}`;
+  else $('twofa-code').focus();
+}
+
+$('twofa-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('twofa-error').hidden = true;
+  try {
+    await api('POST', '/api/2fa', { code: $('twofa-code').value });
+    $('twofa-code').value = '';
+    me.twofa = 'ok';
+    route();
+  } catch (err) {
+    $('twofa-error').textContent = err.message;
+    $('twofa-error').hidden = false;
+    $('twofa-code').select();
+  }
+});
+
 // ---------- routing ----------
 
 function showView(id) {
-  for (const v of ['dashboard', 'terminal-view']) $(v).hidden = v !== id;
+  for (const v of ['dashboard', 'terminal-view', 'twofa']) $(v).hidden = v !== id;
 }
 
 function route() {
+  if (me.twofa === 'needed' || me.twofa === 'not-enrolled') return showTwofa();
   renderMe();
   $('logout-btn').hidden = !!me.local;
   const m = location.hash.match(/^#\/s\/(.+)$/);

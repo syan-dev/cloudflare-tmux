@@ -4,9 +4,11 @@
 // Usage: npm test
 
 const { spawn, execFileSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const WebSocket = require('ws');
+const totp = require('../lib/totp');
 
 const ROOT = path.join(__dirname, '..');
 const SESSION = `cloudflare-tmux-test-${process.pid}`;
@@ -132,6 +134,40 @@ async function main() {
     await assert.rejects(attach(authPort, 'x'), /401/, 'ws without token -> 401');
   } finally {
     srv2.kill();
+  }
+
+  // Two-step codes (TOTP=required): nothing works until a valid, unused code is entered.
+  assert.strictEqual(totp.hotp(totp.base32Encode(Buffer.from('12345678901234567890')), Math.floor(1111111109 / 30)), '081804',
+    'RFC 6238 test vector');
+  const totpFile = path.join(fs.mkdtempSync(path.join(require('os').tmpdir(), 'ct-totp-')), 'totp.json');
+  const secret = totp.newSecret();
+  totp.save(totpFile, { key: null, users: { local: { secret, added: 'test' } } });
+  const totpPort = port + 2;
+  const tbase = `http://127.0.0.1:${totpPort}`;
+  const srv3 = await startServer(totpPort, { AUTH_DISABLED: '1', TOTP: 'required', TOTP_FILE: totpFile });
+  const post = (body, cookie) => fetch(`${tbase}/api/2fa`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Origin: tbase, ...(cookie && { Cookie: cookie }) }, body: JSON.stringify(body),
+  });
+  try {
+    assert.strictEqual((await (await fetch(`${tbase}/api/me`)).json()).twofa, 'needed', 'code needed');
+    assert.strictEqual((await fetch(`${tbase}/api/sessions`)).status, 403, 'api blocked without code');
+    await assert.rejects(attach(totpPort, 'x'), /403/, 'ws blocked without code');
+    assert.strictEqual((await post({ code: '000000' })).status, 401, 'wrong code rejected');
+    const code = totp.hotp(secret, Math.floor(Date.now() / 30000));
+    const ok = await post({ code });
+    assert.strictEqual(ok.status, 204, 'right code accepted');
+    const cookie = ok.headers.get('set-cookie').split(';')[0];
+    assert.match(ok.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/, 'cookie flags');
+    assert.strictEqual((await fetch(`${tbase}/api/sessions`, { headers: { Cookie: cookie } })).status, 200, 'api open with code');
+    assert.strictEqual((await post({ code })).status, 401, 'reused code rejected');
+    assert.strictEqual((await fetch(`${tbase}/api/sessions`, { headers: { Cookie: 'ct_2fa=9999999999.forged' } })).status, 403,
+      'forged cookie rejected');
+    for (let i = 0; i < 5; i++) await post({ code: '111111' });
+    assert.strictEqual((await post({ code: '222222' })).status, 429, 'guessing is rate-limited');
+    totp.save(totpFile, { ...totp.load(totpFile), users: {} });
+    assert.strictEqual((await fetch(`${tbase}/api/sessions`, { headers: { Cookie: cookie } })).status, 403, 'removal revokes access');
+  } finally {
+    srv3.kill();
   }
 
   console.log('All smoke tests passed');

@@ -19,7 +19,8 @@ inbound port to scan, brute-force, or exploit, and your server's IP never appear
 
 Every request to the hostname passes through Cloudflare Access first:
 
-- **Google is the only login method.** There are no one-time email codes and no other providers.
+- **Cloudflare account login is the only login method**, restricted to members of your Cloudflare account.
+  There are no one-time email codes and no other providers.
 - An **Allow** policy includes exactly the emails in `IDENTITIES`. Nobody else gets past Cloudflare's edge.
 - The session cookie is `HttpOnly` and `SameSite=Lax`, and expires after 24h.
 
@@ -40,20 +41,26 @@ team, or a request that reaches port 7681 locally still can't open a shell. The 
 WebSocket upgrades and every non-GET request must carry an `Origin` matching the host. This blocks
 cross-site WebSocket hijacking and CSRF that would otherwise ride on your Access cookie.
 
-### 5. Fixed identity → account mapping
+### 5. Optional second step in the app
+
+With `TOTP=required`, passing Access isn't enough: the app also asks for a 6-digit authenticator code
+before it lists sessions or opens a terminal. Authenticators are enrolled only on the server, never in the
+browser, a reused or wrong code is refused, and guessing is rate-limited. See [Two-step login](two-step.md).
+
+### 6. Fixed identity → account mapping
 
 - No Linux password is ever typed into a web page.
 - The email → user mapping lives on the server, and users can't choose an account.
 - `root` / UID 0 can never be mapped, and accounts with `nologin`/`false` shells are refused.
 - In single-user mode, emails mapped to any user other than the one running the service are refused.
 
-### 6. Privilege separation (multi-user)
+### 7. Privilege separation (multi-user)
 
 - tmux runs through `setpriv --reuid --regid --init-groups --reset-env`, so each person's processes have their own uid, gid and groups, and a clean environment.
 - The root service runs only **root-owned** code from `/opt/cloudflare-tmux`. No user can change what root executes.
 - Its config (`/etc/cloudflare-tmux/env`) is readable only by root.
 
-### 7. Hardened HTTP
+### 8. Hardened HTTP
 
 `Content-Security-Policy: default-src 'self'`, `X-Frame-Options: DENY` (no clickjacking),
 `Referrer-Policy: no-referrer`, `Cache-Control: no-store`, small request-body limits, and validated
@@ -62,7 +69,8 @@ session names (`[A-Za-z0-9_-]{1,32}`) that are always passed as separate argumen
 ## Your part
 
 > [!IMPORTANT]
-> - Turn on **2-Step Verification or a passkey** for every allowed Google account.
+> - Turn on **two-factor authentication** on every allowed Cloudflare account, and consider requiring it for all members of your account.
+> - For a second layer you control, turn on the app's [two-step code](two-step.md).
 > - Keep the **API token** secret, or revoke it after setup ([API token](cloudflare/api-token.md)).
 > - Keep the OS, Node.js, tmux and `cloudflared` up to date.
 > - Only map people you'd give an SSH login to, because that's what this is.
@@ -76,8 +84,9 @@ Other hardening worth considering:
 
 ## What it doesn't protect against
 
-- A compromised Google account on the allow-list: that person gets that user's shell. Use 2FA.
-- A compromised Cloudflare account: it controls the policy and the tunnel.
+- A compromised Cloudflare member account on the allow-list: that person gets that user's shell. Use 2FA, and the app's two-step code.
+- A compromised Cloudflare account with admin rights on your account: it controls the policy and the tunnel.
+  Give other people only **Minimal Account Access**.
 - Anything the mapped Linux user could already do: there's no sandbox beyond normal Unix permissions.
 
 ## Reporting vulnerabilities

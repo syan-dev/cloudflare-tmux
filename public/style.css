@@ -53,3 +53,5 @@ button.danger { color: var(--danger); }
 .keys button { padding: 6px 10px; font-family: ui-monospace, monospace; flex: 0 0 auto; }
 .keys button.active { background: var(--accent); color: #fff; }
 @media (pointer: coarse) { .keys { display: flex; } }
+.wrap.narrow { max-width: 480px; }
+.wrap h2 { font-size: 18px; margin: 24px 0 12px; }

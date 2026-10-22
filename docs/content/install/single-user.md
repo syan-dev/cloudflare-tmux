@@ -6,12 +6,12 @@ description: Run cloudflare-tmux and its tunnel as systemd user services under y
 # Single-user install
 
 This is the default mode. The app and the tunnel run as **your** Linux user, as systemd **user** services,
-and start at boot. Only Google accounts mapped to *your* username can open a terminal.
+and start at boot. Only Cloudflare accounts mapped to *your* username can open a terminal.
 
 ## With the installer
 
 ```bash
-./install.sh --host term.example.com --identities you@gmail.com:$USER
+./install.sh --host term.example.com --identities you@example.com:$USER
 ```
 
 ## Step by step
@@ -21,9 +21,9 @@ The installer only runs these scripts in order, so you can also run them yoursel
 ```bash
 # 1. who may log in
 cp .env.example .env
-sed -i "s/^IDENTITIES=.*/IDENTITIES=you@gmail.com:$USER/" .env
+sed -i "s/^IDENTITIES=.*/IDENTITIES=you@example.com:$USER/" .env
 
-# 2. Cloudflare: tunnel, Google login, Access app, DNS (writes CF_TEAM_DOMAIN / CF_ACCESS_AUD to .env)
+# 2. Cloudflare: tunnel, Cloudflare login, Access app, DNS (writes CF_TEAM_DOMAIN / CF_ACCESS_AUD to .env)
 scripts/cloudflare.sh term.example.com
 
 # 3. services

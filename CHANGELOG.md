@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Login is now "Sign in with Cloudflare"**, restricted to members of your Cloudflare account. Google login
+  and the Google OAuth setup are removed: invite each person as a member (Minimal Account Access) and map
+  their Cloudflare account email in `IDENTITIES`.
+- Optional **two-step code** in the app (`TOTP=required`): a 6-digit authenticator code after Cloudflare
+  login, enrolled on the server with `scripts/totp.js`.
+- **Copy and paste** in the terminal: tmux copies reach the browser clipboard (OSC 52, tmux 3.2+);
+  Ctrl+Shift+C / Cmd+C copy a selection, Ctrl+Shift+V pastes.
+
 ## 0.1.0 (2026-10-22)
 
 First public release.

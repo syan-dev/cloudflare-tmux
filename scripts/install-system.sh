@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs cloudflare-tmux as a root system service so each mapped Google account gets its own Linux user.
+# Installs cloudflare-tmux as a root system service so each mapped Cloudflare account email gets its own Linux user.
 # Usage: sudo NODE_BIN="$(command -v node)" scripts/install-system.sh
 # Mapping comes from IDENTITIES in .env (email:linuxuser,...).
 # The app is copied to /opt/cloudflare-tmux (root-owned), so no user can modify code that runs as root.
@@ -16,9 +16,11 @@ grep -q '^IDENTITIES=.' "$SRC/.env" || { echo "Set IDENTITIES=email:linuxuser,..
 
 # 1. Root-owned copy of the app and node binary
 install -d -m 755 -o root -g root /opt/cloudflare-tmux /opt/cloudflare-tmux/bin
-rm -rf /opt/cloudflare-tmux/public /opt/cloudflare-tmux/node_modules
-cp -r "$SRC/public" "$SRC/node_modules" /opt/cloudflare-tmux/
+rm -rf /opt/cloudflare-tmux/public /opt/cloudflare-tmux/node_modules /opt/cloudflare-tmux/lib
+cp -r "$SRC/public" "$SRC/node_modules" "$SRC/lib" /opt/cloudflare-tmux/
 install -m 644 "$SRC/server.js" "$SRC/package.json" /opt/cloudflare-tmux/
+install -d -m 755 /opt/cloudflare-tmux/scripts
+install -m 755 "$SRC/scripts/totp.js" /opt/cloudflare-tmux/scripts/
 install -m 755 "$NODE_BIN" /opt/cloudflare-tmux/bin/node
 chown -R root:root /opt/cloudflare-tmux
 chmod -R go-w /opt/cloudflare-tmux

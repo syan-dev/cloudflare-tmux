@@ -2,12 +2,13 @@
 
 // cloudflare-tmux: persistent tmux sessions in the browser.
 // tmux keeps sessions alive; closing a tab only detaches.
-// Login is Cloudflare Access (Google); the Access JWT is verified here too, and each allowed
+// Login is Cloudflare Access (Cloudflare account); the Access JWT is verified here too, and each allowed
 // email is mapped to exactly one Linux account (IDENTITIES). Run as root to serve several
 // accounts; each user's tmux runs with their own uid/gid.
 
 const fs = require('fs');
 const os = require('os');
+const crypto = require('crypto');
 const path = require('path');
 const http = require('http');
 const { execFile, execFileSync } = require('child_process');
@@ -15,6 +16,7 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
 const { createRemoteJWKSet, jwtVerify } = require('jose');
+const totp = require('./lib/totp');
 
 loadEnvFile(path.join(__dirname, '.env'));
 
@@ -47,6 +49,15 @@ if (!AUTH_DISABLED && (!TEAM_DOMAIN || !ACCESS_AUD || IDENTITIES.size === 0)) {
 }
 
 const jwks = AUTH_DISABLED ? null : createRemoteJWKSet(new URL(`https://${TEAM_DOMAIN}/cdn-cgi/access/certs`));
+
+// Optional second step after Access: an authenticator-app code checked here (TOTP=required).
+const TOTP_REQUIRED = (process.env.TOTP || 'off') === 'required';
+if (!['off', 'required'].includes(process.env.TOTP || 'off')) fail('TOTP must be "off" or "required".');
+const TOTP_FILE = totp.defaultFile();
+const TOTP_SESSION_HOURS = Number(process.env.TOTP_SESSION_HOURS || 12);
+if (!(TOTP_SESSION_HOURS > 0 && TOTP_SESSION_HOURS <= 720)) fail('TOTP_SESSION_HOURS must be between 1 and 720.');
+const TOTP_COOKIE = 'ct_2fa';
+const TOTP_KEY = TOTP_REQUIRED ? Buffer.from(totp.loadWithKey(TOTP_FILE).key, 'hex') : null;
 
 // tmux >= 3.2 can send copies to the browser clipboard (OSC 52) via `-T clipboard`.
 const TMUX_CLIPBOARD = (() => {
@@ -108,6 +119,52 @@ async function authenticate(req) {
     throw new Error(`${email}: mapped to ${user}, but the server runs as ${os.userInfo().username} (install as root for other users)`);
   }
   return { email, account };
+}
+
+// ---------- second step: authenticator code ----------
+
+// The store is re-read on every check, so `scripts/totp.js add/remove` applies without a restart.
+function totpSecret(email) {
+  return totp.load(TOTP_FILE).users[email]?.secret || null;
+}
+
+// Cookie value: <expiry>.<HMAC(email, expiry, secret)>. Re-enrolling or removing a user invalidates it.
+function totpCookieSig(email, exp, secret) {
+  return crypto.createHmac('sha256', TOTP_KEY).update(`${email}\n${exp}\n${secret}`).digest('base64url');
+}
+
+function totpPassed(req, email) {
+  if (!TOTP_REQUIRED) return true;
+  const secret = totpSecret(email);
+  const [exp, sig] = (getCookie(req, TOTP_COOKIE) || '').split('.');
+  if (!secret || !sig || !(+exp > Date.now() / 1000)) return false;
+  const want = Buffer.from(totpCookieSig(email, exp, secret));
+  const got = Buffer.from(sig);
+  return want.length === got.length && crypto.timingSafeEqual(want, got);
+}
+
+// Per email: reject reused codes and slow down guessing (5 failures per 5 minutes).
+const totpLastCounter = new Map();
+const totpFailures = new Map();
+const TOTP_MAX_FAILURES = 5;
+const TOTP_WINDOW_MS = 5 * 60 * 1000;
+
+function totpCheck(email, code) {
+  const now = Date.now();
+  const recent = (totpFailures.get(email) || []).filter((t) => now - t < TOTP_WINDOW_MS);
+  if (recent.length >= TOTP_MAX_FAILURES) return { status: 429, error: 'Too many attempts. Wait a few minutes.' };
+  const secret = totpSecret(email);
+  if (!secret) return { status: 403, error: `No authenticator set up for ${email}. Ask the admin to run: scripts/totp.js add ${email}` };
+  const counter = totp.verify(secret, code);
+  if (counter < 0 || counter <= (totpLastCounter.get(email) ?? -1)) {
+    recent.push(now);
+    totpFailures.set(email, recent);
+    return { status: 401, error: 'Wrong or already used code' };
+  }
+  totpLastCounter.set(email, counter);
+  totpFailures.delete(email);
+  const exp = Math.floor(now / 1000) + TOTP_SESSION_HOURS * 3600;
+  return { status: 200, cookie: `${exp}.${totpCookieSig(email, exp, secret)}` };
 }
 
 // ---------- running tmux as the mapped user ----------
@@ -189,7 +246,28 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/api/me', (req, res) => res.json({ email: req.email, user: req.account.name, local: AUTH_DISABLED }));
+app.get('/api/me', (req, res) => res.json({
+  email: req.email, user: req.account.name, local: AUTH_DISABLED,
+  twofa: !TOTP_REQUIRED ? 'off' : totpPassed(req, req.email) ? 'ok' : totpSecret(req.email) ? 'needed' : 'not-enrolled',
+}));
+
+app.post('/api/2fa', (req, res) => {
+  const result = totpCheck(req.email, String(req.body?.code || '').replace(/\s/g, ''));
+  if (result.status !== 200) {
+    console.warn(`2fa rejected for ${req.email}: ${result.error}`);
+    return res.status(result.status).json({ error: result.error });
+  }
+  console.log(`2fa ok for ${req.email}`);
+  res.set('Set-Cookie', `${TOTP_COOKIE}=${result.cookie}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${TOTP_SESSION_HOURS * 3600}` +
+    (AUTH_DISABLED ? '' : '; Secure'));
+  res.status(204).end();
+});
+
+// Everything else under /api needs the second step (the page and its assets don't).
+app.use('/api', (req, res, next) => {
+  if (totpPassed(req, req.email)) return next();
+  res.status(403).json({ error: 'Two-step code required', twofa: true });
+});
 
 app.get('/api/sessions', async (req, res) => {
   try { res.json(await listSessions(req.account)); } catch (err) { res.status(500).json({ error: err.message }); }
@@ -256,6 +334,7 @@ server.on('upgrade', async (req, socket, head) => {
     console.warn(`ws auth rejected: ${err.message}`);
     return reject(401, 'Unauthorized');
   }
+  if (!totpPassed(req, identity.email)) return reject(403, 'Forbidden');
   const name = url.searchParams.get('session') || '';
   if (!NAME_RE.test(name)) return reject(400, 'Bad Request');
 
@@ -309,5 +388,6 @@ function attach(ws, name, { email, account }, url) {
 server.listen(PORT, HOST, () => {
   const ids = [...IDENTITIES].map(([e, u]) => `${e}→${u}`).join(', ');
   console.log(`cloudflare-tmux listening on http://${HOST}:${PORT} as ${IS_ROOT ? 'root (multi-user)' : os.userInfo().username}` +
-    (AUTH_DISABLED ? ' (ACCESS CHECK DISABLED, acting as current user)' : `; identities: ${ids}`));
+    (AUTH_DISABLED ? ' (ACCESS CHECK DISABLED, acting as current user)' : `; identities: ${ids}`) +
+    (TOTP_REQUIRED ? `; two-step codes required (${TOTP_FILE})` : ''));
 });

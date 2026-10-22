@@ -1,6 +1,6 @@
 ---
 title: Overview
-description: Persistent tmux sessions in your browser, served through a Cloudflare Tunnel and protected by Cloudflare Zero Trust Access with Google login.
+description: Persistent tmux sessions in your browser, served through a Cloudflare Tunnel and protected by Cloudflare Zero Trust Access with Cloudflare account login.
 ---
 
 # Overview
@@ -11,13 +11,14 @@ It's a small Node.js app in front of **tmux**, published through a **Cloudflare 
 
 - **No open ports.** The app listens on `127.0.0.1` only. `cloudflared` makes an outbound connection to
   Cloudflare, so you need no port forwarding, public IP, or firewall changes.
-- **Sign in with Google.** Cloudflare Access sits in front of the app and only lets in the Google accounts you list.
+- **Sign in with Cloudflare.** Cloudflare Access sits in front of the app and only lets in members of your
+  Cloudflare account whose emails you list. Add an optional [two-step code](two-step.md) on top.
 - **Sessions persist.** Every terminal is a real tmux session. Close the tab, lose your connection, or switch
   devices, and your programs keep running. Reopen the page and you're back where you left off.
 - **The same sessions locally.** `tmux ls` and `tmux attach -t <name>` on the server show the same sessions you use in the browser.
 - **Built for mobile.** A key bar adds Esc, Tab, Ctrl, the tmux prefix and arrow keys on touch screens.
-- **Multi-user.** Each Google account maps to exactly one Linux user, and terminals run as that user. `root` can never be mapped.
-- **One-command setup.** `./install.sh` creates the tunnel, the Google login, the Access application and
+- **Multi-user.** Each Cloudflare account email maps to exactly one Linux user, and terminals run as that user. `root` can never be mapped.
+- **One-command setup.** `./install.sh` creates the tunnel, the Cloudflare login, the Access application and
   the DNS record through the Cloudflare API, then installs systemd services that start on boot.
 
 ![A tmux session open in the browser](assets/img/terminal.png)
@@ -27,21 +28,23 @@ It's a small Node.js app in front of **tmux**, published through a **Cloudflare 
 ## How it works
 
 ```text
- browser ──HTTPS──▶ Cloudflare edge ──▶ Access (Google login, email allow-list)
+ browser ──HTTPS──▶ Cloudflare edge ──▶ Access (Cloudflare login, email allow-list)
                                           │
                                           ▼  Tunnel (outbound connection from your server)
                      your server: cloudflared ──▶ 127.0.0.1:7681 cloudflare-tmux
                                                      │ verifies the Access JWT again
                                                      │ email → Linux user (IDENTITIES)
+                                                     │ optional two-step code (TOTP)
                                                      ▼
                                                   tmux (running as that user)
 ```
 
-1. You open `https://term.example.com`. Cloudflare Access redirects you to Google to sign in.
+1. You open `https://term.example.com`. Cloudflare Access asks you to sign in with your Cloudflare account.
 2. If your email is on the allow-list, Access sets a signed `CF_Authorization` cookie (a JWT) and forwards
    the request through the tunnel to `cloudflared` on your server.
 3. `cloudflared` passes it to the app on `127.0.0.1:7681`. The app **verifies the JWT itself** (signature,
-   issuer, audience, email) and looks up which Linux user that email maps to.
+   issuer, audience, email) and looks up which Linux user that email maps to. If [two-step login](two-step.md)
+   is on, it also asks for a 6-digit authenticator code.
 4. The dashboard lists that user's tmux sessions. Opening one starts a WebSocket that attaches a
    `tmux new-session -A` client in a pseudo-terminal, rendered in the browser by [xterm.js](https://xtermjs.org/).
 5. Closing the tab kills only that tmux *client*. The session and everything running in it stay alive.
@@ -51,7 +54,7 @@ It's a small Node.js app in front of **tmux**, published through a **Cloudflare 
 | | cloudflare-tmux | ttyd / gotty | SSH + port forward | Cloudflare browser SSH |
 |---|---|---|---|---|
 | Open inbound ports | none | yes (or DIY tunnel) | yes | none |
-| Login | Google via Access + in-app JWT check | basic auth / DIY | keys / passwords | Access |
+| Login | Cloudflare account via Access + in-app JWT check | basic auth / DIY | keys / passwords | Access |
 | Sessions survive closing the tab | yes (tmux) | no, unless you wrap tmux yourself | no, unless you use tmux | no, unless you use tmux |
 | Session dashboard | yes | no | no | no |
 | Mobile key bar | yes | no | depends on the app | no |

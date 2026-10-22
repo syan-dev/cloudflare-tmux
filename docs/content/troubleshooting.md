@@ -29,16 +29,28 @@ The app rejected the Access JWT. The log line `auth rejected ...: <reason>` tell
 ## Cloudflare's "Access denied" page
 
 Cloudflare Access blocked you before the request reached your server. The email you signed in with isn't in
-the policy. Check **which** Google account you used (the account chooser may have picked another one), then
-check `IDENTITIES` and re-run `scripts/cloudflare.sh`.
+the policy. Check **which** Cloudflare account you signed in with, then check `IDENTITIES` and re-run
+`scripts/cloudflare.sh`.
 
-## Google error `redirect_uri_mismatch` or `access_denied`
+## "Cloudflare sign-in is restricted to members of the account"
 
-- `redirect_uri_mismatch`: the OAuth client's redirect URI must be exactly
-  `https://<team>.cloudflareaccess.com/cdn-cgi/access/callback`.
-- `access_denied` / "app is in testing": add the account as a **test user** on the OAuth consent screen, or publish the app.
+The Cloudflare account you signed in with isn't a member of your Cloudflare account yet:
 
-See [Google login](cloudflare/google-login.md).
+- invite it under **Manage Account → Members → Invite** (role **Minimal Account Access**), and
+- make sure the invitation was **accepted**: the person opens the email, or the invite in their own dashboard.
+
+See [Cloudflare login](cloudflare/cloudflare-login.md).
+
+## Two-step code is refused
+
+- **"Wrong or already used code"**: the phone's clock is probably off. Turn on automatic time, then wait for
+  a fresh code. Each code works only once.
+- **"No authenticator set up for ..."**: enroll that email on the server: `scripts/totp.js add <email>`.
+  Check the spelling matches `IDENTITIES`.
+- **"Too many attempts"**: 5 wrong codes in 5 minutes. Wait a few minutes and try again.
+- Lost the phone: run `scripts/totp.js add <email>` again to enroll a new device. The old one stops working.
+
+See [Two-step login](two-step.md).
 
 ## Error 1033 / 502 / "Bad gateway"
 

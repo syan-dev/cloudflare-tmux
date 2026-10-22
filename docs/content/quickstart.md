@@ -32,11 +32,12 @@ Go to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profi
 
 The installer asks for this token and saves it to `~/.cloudflare-token` with mode `600`. See [API token](cloudflare/api-token.md) for why each permission is needed.
 
-## 3. Set up Google login (once per Zero Trust account)
+## 3. Invite the people who'll log in
 
-If **Google** isn't already a login method in Zero Trust, create a Google OAuth client using
-[Google login](cloudflare/google-login.md). Keep the **client ID** and **client secret** handy; the
-installer can register them with Cloudflare for you.
+Login is **Sign in with Cloudflare**: each person signs in with their own Cloudflare account, and only
+members of *your* Cloudflare account get through. You're already a member. For anyone else, go to
+**Manage Account → Members → Invite** and give them the **Minimal Account Access** role. They accept the
+invitation from their own Cloudflare account. See [Cloudflare login](cloudflare/cloudflare-login.md).
 
 ## 4. Run the installer
 
@@ -48,9 +49,9 @@ It will:
 
 1. check prerequisites and offer to download `cloudflared` if it's missing,
 2. ask for the **hostname** (for example `term.example.com`) and **who may log in**
-   (`you@gmail.com:youruser`, where the part after `:` is your Linux username),
-3. ask for the API token and, if needed, the Google OAuth client,
-4. create the tunnel, Google login, Access application and DNS record ([details](cloudflare/what-gets-created.md)),
+   (`you@example.com:youruser`: the email of a Cloudflare account, then your Linux username),
+3. ask for the API token,
+4. create the tunnel, Cloudflare login, Access application and DNS record ([details](cloudflare/what-gets-created.md)),
 5. install and start two systemd user services: the app and the tunnel.
 
 To run without prompts (for scripts or provisioning tools):
@@ -58,16 +59,17 @@ To run without prompts (for scripts or provisioning tools):
 ```bash
 CF_API_TOKEN=... ./install.sh --yes \
   --host term.example.com \
-  --identities you@gmail.com:youruser
+  --identities you@example.com:youruser
 ```
 
 ## 5. Open it
 
-Go to `https://term.example.com`, sign in with Google, create a session and start working. Close the tab
+Go to `https://term.example.com`, sign in with your Cloudflare account, create a session and start working. Close the tab
 whenever you like; the session keeps running.
 
 > [!IMPORTANT]
-> Turn on 2-Step Verification (or a passkey) for every Google account you allow. That account is now the key to a shell on your server.
+> Turn on two-factor authentication for every Cloudflare account you allow. That account is now the key to a shell on your server.
+> For an extra layer, require a [two-step code](two-step.md) in the app itself.
 
 ## What's next
 

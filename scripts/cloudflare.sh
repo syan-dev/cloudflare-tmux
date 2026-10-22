@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Idempotently provisions the Cloudflare side via API:
-#   tunnel (remotely managed) + ingress, Google login, Access application + allow policy, DNS CNAME.
+#   tunnel (remotely managed) + ingress, Cloudflare login, Access application + allow policy, DNS CNAME.
 # Usage: scripts/cloudflare.sh term.example.com
 # Allowed people come from IDENTITIES in .env (email:linuxuser,...).
-# Google login: uses an existing Google identity provider, or creates one from
-#   ~/.cloudflare-tmux-google-oauth (line 1: OAuth client ID, line 2: client secret).
+# Login: "Sign in with Cloudflare", restricted to members of your Cloudflare account. Each allowed
+#   person needs their own Cloudflare account, invited as a member of yours (Minimal Account Access).
 # Needs an API token in $CF_API_TOKEN or ~/.cloudflare-token with:
 #   Account: Cloudflare Tunnel: Edit, Account: Access: Apps and Policies: Edit,
 #   Account: Access: Organizations, Identity Providers, and Groups: Edit, Zone: DNS: Edit
@@ -21,7 +21,6 @@ elif [ -s "$HOME/.cloudflare-token" ]; then TOKEN="$(tr -d '[:space:]' < "$HOME/
 else echo "No API token: set CF_API_TOKEN or save it to ~/.cloudflare-token (chmod 600)"; exit 1; fi
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$APP_DIR/.env"
-OAUTH_FILE="$HOME/.cloudflare-tmux-google-oauth"
 
 IDENTITIES="$(sed -n 's/^IDENTITIES=//p' "$ENV_FILE" 2>/dev/null | tail -1)"
 [ -n "$IDENTITIES" ] || { echo "Set IDENTITIES=email:linuxuser,... in $ENV_FILE"; exit 1; }
@@ -55,22 +54,22 @@ cf PUT "/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/configurations" \
  cf GET "/accounts/$ACCOUNT_ID/cfd_tunnel/$TUNNEL_ID/token" | jq_ 'r' > "$HOME/.cloudflared/cloudflare-tmux.token")
 echo "tunnel $TUNNEL_NAME=$TUNNEL_ID"
 
-# 2. Google identity provider
-IDP_ID="$(cf GET "/accounts/$ACCOUNT_ID/access/identity_providers" | jq_ "next((i['id'] for i in r if i['type']=='google'), '')")"
+# 2. Cloudflare login (identity provider type "cloudflare"), only for members of this account
+IDP_ID="$(cf GET "/accounts/$ACCOUNT_ID/access/identity_providers" | jq_ "next((i['id'] for i in r if i['type']=='cloudflare'), '')")"
 if [ -z "$IDP_ID" ]; then
-  [ -s "$OAUTH_FILE" ] || { echo "No Google login configured. Put the OAuth client ID and secret in $OAUTH_FILE (2 lines)."; exit 1; }
-  CLIENT_ID="$(sed -n 1p "$OAUTH_FILE" | tr -d '[:space:]')"
-  CLIENT_SECRET="$(sed -n 2p "$OAUTH_FILE" | tr -d '[:space:]')"
   IDP_ID="$(cf POST "/accounts/$ACCOUNT_ID/access/identity_providers" \
-    "{\"name\":\"Google\",\"type\":\"google\",\"config\":{\"client_id\":\"$CLIENT_ID\",\"client_secret\":\"$CLIENT_SECRET\"}}" | jq_ 'r["id"]')"
+    '{"name":"Cloudflare","type":"cloudflare","config":{"restrict_to_account_members":true}}' | jq_ 'r["id"]')"
+elif [ "$(cf GET "/accounts/$ACCOUNT_ID/access/identity_providers/$IDP_ID" | jq_ "r.get('config',{}).get('restrict_to_account_members')")" != True ]; then
+  echo "  warning: Cloudflare login is not restricted to account members."
+  echo "  Turn on 'restrict to account members' in Zero Trust > Settings > Authentication > Cloudflare."
 fi
-echo "google idp=$IDP_ID"
+echo "cloudflare login idp=$IDP_ID"
 
-# 3. Access application: Google only, allow exactly the mapped emails
+# 3. Access application: Cloudflare login only, allow exactly the mapped emails
 # (created before DNS, so the hostname is never reachable unprotected)
 TEAM_DOMAIN="$(cf GET "/accounts/$ACCOUNT_ID/access/organizations" | jq_ 'r["auth_domain"]')"
 APP_ID="$(cf GET "/accounts/$ACCOUNT_ID/access/apps" | jq_ "next((a['id'] for a in r if a.get('domain')=='$HOST'), '')")"
-POLICY="{\"name\":\"Mapped Google accounts\",\"decision\":\"allow\",\"include\":$EMAILS_JSON}"
+POLICY="{\"name\":\"Mapped Cloudflare accounts\",\"decision\":\"allow\",\"include\":$EMAILS_JSON}"
 APP_BODY="{\"name\":\"cloudflare-tmux\",\"type\":\"self_hosted\",\"domain\":\"$HOST\",\"session_duration\":\"24h\",
   \"allowed_idps\":[\"$IDP_ID\"],\"auto_redirect_to_identity\":true,
   \"app_launcher_visible\":true,\"http_only_cookie_attribute\":true,

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f1115">
   <title>cloudflare-tmux</title>
   <link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
-  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="stylesheet" href="/style.css?v=4">
 </head>
 <body>
   <section id="dashboard" hidden>
@@ -24,6 +24,23 @@
       <p id="error" class="error" hidden></p>
       <ul id="sessions" class="sessions"></ul>
       <p id="empty" class="muted" hidden>No sessions yet. Create one above.</p>
+    </main>
+  </section>
+
+  <section id="twofa" hidden>
+    <header class="bar">
+      <h1>cloudflare-tmux</h1>
+      <span id="twofa-me" class="muted"></span>
+      <a class="btn" href="/cdn-cgi/access/logout">Log out</a>
+    </header>
+    <main class="wrap narrow">
+      <h2>Two-step verification</h2>
+      <form id="twofa-form" class="row">
+        <input id="twofa-code" placeholder="6-digit code from your authenticator app" inputmode="numeric"
+               autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required>
+        <button type="submit" class="primary">Verify</button>
+      </form>
+      <p id="twofa-error" class="error" hidden></p>
     </main>
   </section>
 
@@ -52,6 +69,6 @@
   <script src="/vendor/addon-fit/lib/addon-fit.js"></script>
   <script src="/vendor/addon-web-links/lib/addon-web-links.js"></script>
   <script src="/vendor/addon-clipboard/lib/addon-clipboard.js"></script>
-  <script src="/app.js?v=5"></script>
+  <script src="/app.js?v=6"></script>
 </body>
 </html>

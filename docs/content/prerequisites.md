@@ -17,16 +17,18 @@ Any plan works, including Free. The installer guesses the zone by dropping the f
 
 1. In the [Cloudflare dashboard](https://dash.cloudflare.com), open **Zero Trust**.
 2. The first time, you'll be asked to pick a **team name**. This becomes your team domain:
-   `<team>.cloudflareaccess.com`. You'll need it for the Google OAuth redirect URL.
+   `<team>.cloudflareaccess.com`.
 3. Choose the **Free** plan (up to 50 users). Cloudflare may ask for a payment method even for the Free plan.
 
 > [!NOTE]
 > The team domain is the address of the Cloudflare Access login page. The app checks that the JWTs it
 > receives were issued by exactly this domain.
 
-### A Google account for each person
+### A Cloudflare account for each person
 
-Each person signs in with a Google account (Gmail or Google Workspace). You'll map each email to a Linux user.
+Each person signs in with their own Cloudflare account (free) and must be a **member of your Cloudflare
+account**. Invite them with the **Minimal Account Access** role. You'll map each account's email to a Linux
+user. See [Cloudflare login](cloudflare/cloudflare-login.md).
 
 ## On your server
 

@@ -15,15 +15,16 @@ so it needs an API token. Create a **custom token** at
 |---|---|---|---|
 | Account | **Cloudflare Tunnel** | Edit | create the tunnel, set its ingress rules, fetch its run token |
 | Account | **Access: Apps and Policies** | Edit | create or update the Access application and its allow policy |
-| Account | **Access: Organizations, Identity Providers, and Groups** | Edit | read your team domain; find or create the Google login method |
+| Account | **Access: Organizations, Identity Providers, and Groups** | Edit | read your team domain; find or create the Cloudflare login method |
 | Zone | **DNS** | Edit | create or update the proxied CNAME `term.example.com → <tunnel>.cfargotunnel.com` |
 
 Under **Account Resources**, pick the account that owns the zone. Under **Zone Resources**, choose
 **Specific zone → example.com** so the token can't touch your other domains.
 
 > [!TIP]
-> If Google login is already set up in Zero Trust, **Read** access is enough for *Access: Organizations,
-> Identity Providers, and Groups*. The script only reads them in that case.
+> If the Cloudflare login method already exists in Zero Trust (it usually does, because Zero Trust creates
+> it for you), **Read** access is enough for *Access: Organizations, Identity Providers, and Groups*. The
+> script only reads them in that case.
 
 ## Where the token is stored
 

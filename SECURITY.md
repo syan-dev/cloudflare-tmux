@@ -11,9 +11,9 @@ Include steps to reproduce, the affected version or commit, and the impact. You 
 ## Scope
 
 In scope: authentication or authorization bypass in the app (JWT verification, `IDENTITIES` mapping,
-same-origin checks), privilege escalation in multi-user mode, command injection, and insecure defaults in the setup scripts.
+the two-step code, same-origin checks), privilege escalation in multi-user mode, command injection, and insecure defaults in the setup scripts.
 
-Out of scope: a compromised Google or Cloudflare account, misconfigurations made by hand outside the
+Out of scope: a compromised Cloudflare account, misconfigurations made by hand outside the
 scripts, and anything the mapped Linux user can already do.
 
 ## Supported versions

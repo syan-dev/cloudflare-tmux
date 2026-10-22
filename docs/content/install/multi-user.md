@@ -1,6 +1,6 @@
 ---
 title: Multi-user install
-description: Serve several people from one machine, each Google account mapped to its own Linux user.
+description: Serve several people from one machine, each Cloudflare account email mapped to its own Linux user.
 ---
 
 # Multi-user install
@@ -11,7 +11,7 @@ files, permissions, and tmux sessions.
 ```bash
 ./install.sh --multi-user \
   --host term.example.com \
-  --identities alice@gmail.com:alice,bob@example.com:bob
+  --identities alice@example.com:alice,bob@example.com:bob
 ```
 
 Each Linux user must already exist and have a login shell (`sudo adduser alice`).
@@ -46,5 +46,7 @@ A root service must not run code that a normal user can edit. `scripts/install-s
 ## Adding or removing a person
 
 1. `sudo adduser carol` (if needed).
-2. Add or remove `carol@gmail.com:carol` in `IDENTITIES` in `.env`.
-3. Run the two commands above. Removing an email takes them out of the Access policy **and** the app's own allow-list.
+2. Invite carol's Cloudflare account as a member of yours with **Minimal Account Access**
+   ([Cloudflare login](../cloudflare/cloudflare-login.md)).
+3. Add or remove `carol@example.com:carol` in `IDENTITIES` in `.env`.
+4. Run the two commands above. Removing an email takes them out of the Access policy **and** the app's own allow-list.

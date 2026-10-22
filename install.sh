@@ -10,9 +10,8 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$APP_DIR/.env"
 TOKEN_FILE="$HOME/.cloudflare-token"
-OAUTH_FILE="$HOME/.cloudflare-tmux-google-oauth"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
-dl="" have_oauth="" client_id="" client_secret="" token=""
+dl="" token=""
 
 usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 while [ $# -gt 0 ]; do
@@ -94,7 +93,7 @@ IDENTITIES="$IDENTITIES_ARG"
 if [ -z "$IDENTITIES" ]; then
   default_ids="$current_ids"
   [ -n "$default_ids" ] || { email="$(git config user.email 2>/dev/null || true)"; [ -n "$email" ] && default_ids="$email:$USER"; }
-  ask IDENTITIES "Who may log in? google-email:linux-user[,more...]" "$default_ids"
+  ask IDENTITIES "Who may log in? cloudflare-account-email:linux-user[,more...]" "$default_ids"
 fi
 [ -n "$IDENTITIES" ] || { echo "IDENTITIES is required"; exit 1; }
 if grep -q '^IDENTITIES=' "$ENV_FILE"; then
@@ -133,20 +132,12 @@ else
   ok "saved to $TOKEN_FILE"
 fi
 
-if [ ! -s "$OAUTH_FILE" ] && [ "$YES" -eq 0 ]; then
-  echo "  If Google login is not set up in Zero Trust yet, the script can add it for you."
-  echo "  See https://syan-dev.github.io/cloudflare-tmux/cloudflare/google-login.html"
-  ask have_oauth "Enter a Google OAuth client ID/secret now? (y/n, n = already configured in Zero Trust)" n
-  if [ "$have_oauth" = y ]; then
-    ask client_id "Google OAuth client ID"
-    ask_secret client_secret "Google OAuth client secret"
-    (umask 077; printf '%s\n%s\n' "$client_id" "$client_secret" > "$OAUTH_FILE")
-    ok "saved to $OAUTH_FILE"
-  fi
-fi
+echo "  Login is 'Sign in with Cloudflare': everyone in IDENTITIES needs their own Cloudflare account,"
+echo "  invited as a member of yours (Manage Account > Members, role: Minimal Account Access)."
+echo "  See https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html"
 
 # ---------- 3. Cloudflare ----------
-bold "3/4 Provisioning Cloudflare (tunnel, Google login, Access app, DNS)"
+bold "3/4 Provisioning Cloudflare (tunnel, Cloudflare login, Access app, DNS)"
 "$APP_DIR/scripts/cloudflare.sh" "$HOST"
 
 # ---------- 4. services ----------

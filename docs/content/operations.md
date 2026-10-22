@@ -27,10 +27,10 @@ systemctl --user status cloudflare-tmux-cloudflared   # the tunnel is still a us
 Typical log lines:
 
 ```text
-cloudflare-tmux listening on http://127.0.0.1:7681 as root (multi-user); identities: alice@gmail.com→alice
-attach alice/work by alice@gmail.com (pid 41233)
-detach alice/work by alice@gmail.com (ws 1001)
-auth rejected GET /: email not mapped: mallory@gmail.com
+cloudflare-tmux listening on http://127.0.0.1:7681 as root (multi-user); identities: alice@example.com→alice
+attach alice/work by alice@example.com (pid 41233)
+detach alice/work by alice@example.com (ws 1001)
+auth rejected GET /: email not mapped: mallory@example.com
 ```
 
 You can also see the tunnel's health in Zero Trust → **Networks → Tunnels** (it should say *Healthy*).
@@ -80,7 +80,8 @@ scripts/setup.sh                         # or install-system.sh in multi-user mo
    sudo systemctl daemon-reload
    ```
 
-2. Remove local secrets: `rm ~/.cloudflared/cloudflare-tmux.token ~/.cloudflare-tmux-google-oauth ~/.cloudflare-token`.
+2. Remove local secrets: `rm ~/.cloudflared/cloudflare-tmux.token ~/.cloudflare-token`, and
+   `rm -r ~/.config/cloudflare-tmux` if you used the two-step code (`totp.json`).
 3. In the Cloudflare dashboard:
    - **DNS** → delete the `term` CNAME record (do this first, so the hostname stops resolving),
    - **Zero Trust → Access → Applications** → delete `cloudflare-tmux`,
