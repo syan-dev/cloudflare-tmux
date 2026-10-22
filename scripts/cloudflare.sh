@@ -32,7 +32,6 @@ if [ -n "${CF_API_TOKEN:-}" ]; then TOKEN="$CF_API_TOKEN"
 elif [ -t 0 ]; then read -r -s -p "Cloudflare API token (not saved): " TOKEN; echo
 else echo "No API token: run interactively, or set CF_API_TOKEN (see docs/content/cloudflare/api-token.md)"; exit 1; fi
 [ -n "$TOKEN" ] || { echo "Token is required"; exit 1; }
-[ -e "$HOME/.cloudflare-token" ] && echo "  note: ~/.cloudflare-token is no longer used; delete it: rm ~/.cloudflare-token"
 IDENTITIES="$(env_get IDENTITIES)"
 [ -n "$IDENTITIES" ] || { echo "Set IDENTITIES=email:linuxuser,... in $ENV_FILE"; exit 1; }
 EMAILS_JSON="$(python3 -c 'import sys,json

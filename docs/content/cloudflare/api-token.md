@@ -102,10 +102,6 @@ secret store rather than typed on the command line.
 The scripts send it to `curl` as a header from a file descriptor, never as a command-line argument,
 so other users on the machine can't read it with `ps`.
 
-> [!NOTE]
-> Older versions saved the token to `~/.cloudflare-token`. It's no longer read, and the scripts remind you to
-> delete it: `rm ~/.cloudflare-token`.
-
 > [!CAUTION]
 > Anyone with this token can change your tunnels and Access policies, and so could open your terminal to
 > themselves. Treat it like a password, and revoke it when setup is done.

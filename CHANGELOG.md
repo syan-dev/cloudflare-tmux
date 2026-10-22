@@ -3,10 +3,9 @@
 ## Unreleased
 
 - **Smaller API token**: *Access: Organizations, Identity Providers, and Groups* needs only **Read** (Edit
-  just to create the Cloudflare login method the first time). The token is no longer saved to
-  `~/.cloudflare-token` (or read from it): `install.sh` and `cloudflare.sh` ask for it when they need it and
-  keep it in memory for that run. The quickstart now ends with deleting the token in Cloudflare, since
-  nothing running uses it. Delete an existing `~/.cloudflare-token`.
+  just to create the Cloudflare login method the first time). The token is never saved:
+  `install.sh` and `cloudflare.sh` ask for it when they need it and keep it in memory for that run. The
+  quickstart now ends with deleting the token in Cloudflare, since nothing running uses it.
 - **Security fixes**: a malformed `Origin` header on `/ws` could crash the server; the setup script no longer
   puts the API token or the tunnel token on command lines (visible to other local users in `ps`).
 - **Security docs**: a step-by-step hardening checklist, what to do if an account or token is compromised, and
