@@ -24,11 +24,6 @@
   .diagram-caption { @apply -mt-4 mb-8 text-center text-sm text-slate-500 dark:text-slate-400; }
   .badge { @apply inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white; }
 
-  /* Task lists (- [ ] item): the checkbox replaces the bullet */
-  .prose ul:has(> li > input[type="checkbox"]) { @apply list-none pl-0; }
-  .prose li:has(> input[type="checkbox"]) { @apply pl-0; }
-  .prose li > input[type="checkbox"] { @apply mr-2 accent-brand-500; }
-
   .table-wrap { @apply my-6 overflow-x-auto; }
   .table-wrap table { @apply my-0; }
 
