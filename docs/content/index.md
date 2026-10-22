@@ -1,25 +1,22 @@
 ---
 title: Overview
-description: Persistent tmux sessions in your browser, served through a Cloudflare Tunnel and protected by Cloudflare Zero Trust Access with Cloudflare account login.
+description: Persistent tmux sessions in your browser, served through a Cloudflare Tunnel and protected by Cloudflare Access.
 ---
 
 # Overview
 
 **cloudflare-tmux** gives you a terminal on your own Linux machine from any browser, including your phone.
-It's a small Node.js app in front of **tmux**, published through a **Cloudflare Tunnel** and protected by
-**Cloudflare Zero Trust Access**.
+It's a small Node.js app in front of tmux, reachable through a Cloudflare Tunnel and protected by Cloudflare Access.
 
-- **No open ports.** The app listens on `127.0.0.1` only. `cloudflared` makes an outbound connection to
-  Cloudflare, so you need no port forwarding, public IP, or firewall changes.
-- **Sign in with Cloudflare.** Cloudflare Access sits in front of the app and only lets in members of your
-  Cloudflare account whose emails you list. Add an optional [two-step code](two-step.md) on top.
-- **Sessions persist.** Every terminal is a real tmux session. Close the tab, lose your connection, or switch
-  devices, and your programs keep running. Reopen the page and you're back where you left off.
-- **The same sessions locally.** `tmux ls` and `tmux attach -t <name>` on the server show the same sessions you use in the browser.
-- **Built for mobile.** A key bar adds Esc, Tab, Ctrl, the tmux prefix and arrow keys on touch screens.
-- **Multi-user.** Each Cloudflare account email maps to exactly one Linux user, and terminals run as that user. `root` can never be mapped.
-- **One-command setup.** `./install.sh` creates the tunnel, the Cloudflare login, the Access application and
-  the DNS record through the Cloudflare API, then installs systemd services that start on boot.
+- **No open ports.** Your server connects out to Cloudflare. You need no port forwarding, public IP or firewall changes.
+- **Sign in with your Cloudflare account.** Cloudflare Access shows a login page first. Only the people you list get
+  through. You can add a [two-step code](two-step.md) on top.
+- **Sessions keep running.** Every terminal is a real tmux session. Close the tab, lose Wi-Fi or switch devices, and
+  your programs carry on.
+- **The same sessions on the server.** `tmux ls` and `tmux attach` show what you see in the browser.
+- **Built for phones.** A key bar adds Esc, Tab, Ctrl, the tmux prefix and arrow keys on touch screens.
+- **Multi-user.** Each Cloudflare account maps to one Linux user. Terminals run as that user, never as root.
+- **One command to set up.** `./install.sh` creates everything on Cloudflare and installs services that start on boot.
 
 ![A tmux session open in the browser](assets/img/terminal.png)
 
@@ -28,34 +25,25 @@ It's a small Node.js app in front of **tmux**, published through a **Cloudflare 
 ## How it works
 
 ```text
- browser ──HTTPS──▶ Cloudflare edge ──▶ Access (Cloudflare login, email allow-list)
-                                          │
-                                          ▼  Tunnel (outbound connection from your server)
-                     your server: cloudflared ──▶ 127.0.0.1:7681 cloudflare-tmux
-                                                     │ verifies the Access JWT again
-                                                     │ email → Linux user (IDENTITIES)
-                                                     │ optional two-step code (TOTP)
-                                                     ▼
-                                                  tmux (running as that user)
+browser ──HTTPS──▶ Cloudflare Access (login page) ──▶ tunnel ──▶ your server ──▶ tmux
 ```
 
 1. You open `https://term.example.com`. Cloudflare Access asks you to sign in with your Cloudflare account.
-2. If your email is on the allow-list, Access sets a signed `CF_Authorization` cookie (a JWT) and forwards
-   the request through the tunnel to `cloudflared` on your server.
-3. `cloudflared` passes it to the app on `127.0.0.1:7681`. The app **verifies the JWT itself** (signature,
-   issuer, audience, email) and looks up which Linux user that email maps to. If [two-step login](two-step.md)
-   is on, it also asks for a 6-digit authenticator code.
-4. The dashboard lists that user's tmux sessions. Opening one starts a WebSocket that attaches a
-   `tmux new-session -A` client in a pseudo-terminal, rendered in the browser by [xterm.js](https://xtermjs.org/).
-5. Closing the tab kills only that tmux *client*. The session and everything running in it stay alive.
+2. If you're on the list, Cloudflare forwards the request through the tunnel to your server. The tunnel is an
+   outbound connection, so nothing on your server listens on the internet.
+3. The app checks the login a second time, works out which Linux user you are, and shows your tmux sessions.
+4. Opening a session attaches a tmux client and streams it to your browser. Closing the tab detaches that
+   client. The session and everything running in it keep going.
+
+The [security model](security.md) describes each check in detail.
 
 ## How it compares
 
 | | cloudflare-tmux | ttyd / gotty | SSH + port forward | Cloudflare browser SSH |
 |---|---|---|---|---|
-| Open inbound ports | none | yes (or DIY tunnel) | yes | none |
-| Login | Cloudflare account via Access + in-app JWT check | basic auth / DIY | keys / passwords | Access |
-| Sessions survive closing the tab | yes (tmux) | no, unless you wrap tmux yourself | no, unless you use tmux | no, unless you use tmux |
+| Open inbound ports | none | yes, or your own tunnel | yes | none |
+| Login | Cloudflare account, checked twice | basic auth or your own | keys or passwords | Cloudflare Access |
+| Sessions survive closing the tab | yes | only with tmux | only with tmux | only with tmux |
 | Session dashboard | yes | no | no | no |
 | Mobile key bar | yes | no | depends on the app | no |
 | Needs an SSH server | no | no | yes | yes |
@@ -67,4 +55,4 @@ It's a small Node.js app in front of **tmux**, published through a **Cloudflare 
 
 - [Prerequisites](prerequisites.md): what you need before you start.
 - [Security model](security.md): why it's safe to put a shell behind a URL.
-- [What gets created in Cloudflare](cloudflare/what-gets-created.md): every object the setup script touches.
+- [What gets created in Cloudflare](cloudflare/what-gets-created.md): every object the installer touches.

@@ -2,7 +2,7 @@
 
 <p align="center">
   <b>Your tmux sessions, in any browser.</b><br>
-  Served through a <b>Cloudflare Tunnel</b> (no open ports) and protected by <b>Cloudflare Zero Trust Access</b> (Cloudflare account login).
+  Served through a <b>Cloudflare Tunnel</b> and protected by <b>Cloudflare Access</b>.
 </p>
 
 <p align="center">
@@ -23,22 +23,24 @@
   <img src="docs/public/assets/img/dashboard.png" alt="The session dashboard" width="49%">
 </p>
 
-- **No open ports.** The app listens on `127.0.0.1`; `cloudflared` connects out to Cloudflare. It works behind NAT and CGNAT.
-- **Sign in with Cloudflare.** Access only lets in members of your Cloudflare account whose emails you list, and the app **verifies the Access JWT again** on every request.
-- **Optional two-step code.** The app can also ask for a 6-digit authenticator code after Cloudflare login.
-- **Sessions persist.** It's real tmux: close the tab, switch devices, and your programs keep running. `tmux attach` works locally too.
-- **Mobile-friendly.** A key bar adds Esc, Tab, Ctrl, the tmux prefix and arrow keys on touch screens.
-- **Multi-user.** Each Cloudflare account email maps to one Linux user (never root); terminals run as that user.
-- **One command.** `./install.sh` creates the tunnel, Cloudflare login, Access app and DNS record through the Cloudflare API, then installs systemd services.
+## What you get
 
-```text
-browser ──HTTPS──▶ Cloudflare Access (Cloudflare login) ──▶ Tunnel ──▶ cloudflared ──▶ 127.0.0.1:7681 cloudflare-tmux
-                                                              JWT check · email → Linux user ──▶ tmux
-```
+- **A terminal in any browser**, on your laptop or your phone.
+- **No open ports.** Your server connects out to Cloudflare. It works behind NAT and CGNAT.
+- **Sign in with your Cloudflare account.** Only the people you list get in.
+- **Sessions keep running** when you close the tab. It's real tmux, so `tmux attach` works on the server too.
+- **One command to set up.** `./install.sh` does the Cloudflare side and installs the services.
 
-## Quickstart
+## How it works
 
-You need a domain on Cloudflare, [Zero Trust](https://one.dash.cloudflare.com/) enabled (the Free plan is fine), and a Linux server with systemd, tmux and Node.js 18+.
+Your browser opens `https://term.example.com`. Cloudflare shows its login page first and lets only listed people through.
+The request then travels through a tunnel to your server, where a small Node.js app attaches you to a tmux session.
+
+## Install
+
+You need a domain on Cloudflare, [Zero Trust](https://one.dash.cloudflare.com/) turned on (the free plan is fine),
+and a Linux server with systemd, tmux and Node.js 18 or newer.
+Details: [Prerequisites](https://syan-dev.github.io/cloudflare-tmux/prerequisites.html).
 
 ```bash
 git clone https://github.com/syan-dev/cloudflare-tmux.git
@@ -46,27 +48,26 @@ cd cloudflare-tmux
 ./install.sh
 ```
 
-The installer asks for a hostname (for example `term.example.com`), who may log in, and a
-[Cloudflare API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html). Start with yourself:
-`you@example.com:youruser`, the email you sign in to Cloudflare with, then your Linux user. Then open
-`https://term.example.com` and sign in with your Cloudflare account.
+The installer asks three questions:
 
-The API token is only for setup: delete it once this works, and create a short-lived one when you
-[change something on Cloudflare](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#when-you-need-it)
-(adding people, the hostname). Then go through the
-[security checklist](https://syan-dev.github.io/cloudflare-tmux/security.html#hardening-checklist).
+- **Hostname**, for example `term.example.com`.
+- **Who may log in.** Start with yourself: `you@example.com:youruser`, your Cloudflare email and your Linux user.
+- **A Cloudflare API token**, used only during setup. [How to create it](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#create-it).
 
-Later, to let others in, [invite them as members](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html)
-(Minimal Account Access) and re-run `./install.sh --identities you@example.com:you,friend@example.com:you`
-(this needs a new API token: the setup one isn't saved).
+Open `https://term.example.com` and sign in with your Cloudflare account.
 
-Without prompts:
+Afterwards, [delete the API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#delete-it-afterwards)
+and go through the [security checklist](https://syan-dev.github.io/cloudflare-tmux/security.html#hardening-checklist).
+To let more people in, see [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html).
+
+Without prompts, for scripts:
 
 ```bash
 CF_API_TOKEN=... ./install.sh --yes --host term.example.com --identities you@example.com:$USER
 ```
 
-Several people with their own Linux users: add `--multi-user`. See the [docs](https://syan-dev.github.io/cloudflare-tmux/install/multi-user.html).
+Several people, each with their own Linux user: add `--multi-user`.
+See [Multi-user install](https://syan-dev.github.io/cloudflare-tmux/install/multi-user.html).
 
 ## Documentation
 
@@ -74,14 +75,16 @@ Full docs: **https://syan-dev.github.io/cloudflare-tmux/**
 
 | | |
 |---|---|
-| [Prerequisites](https://syan-dev.github.io/cloudflare-tmux/prerequisites.html) | Cloudflare and server requirements |
-| [What gets created](https://syan-dev.github.io/cloudflare-tmux/cloudflare/what-gets-created.html) | every Cloudflare object, and how to do it by hand |
-| [Configuration](https://syan-dev.github.io/cloudflare-tmux/configuration.html) | env vars, flags, files |
-| [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html) | invite members, map emails, 2FA |
-| [Security model](https://syan-dev.github.io/cloudflare-tmux/security.html) | defense in depth, hardening |
-| [Two-step login](https://syan-dev.github.io/cloudflare-tmux/two-step.html) | optional authenticator code in the app |
+| [Prerequisites](https://syan-dev.github.io/cloudflare-tmux/prerequisites.html) | what you need first |
+| [Quickstart](https://syan-dev.github.io/cloudflare-tmux/quickstart.html) | install in five minutes |
+| [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html) | add and remove people |
+| [API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html) | permissions, when you need it |
+| [What gets created](https://syan-dev.github.io/cloudflare-tmux/cloudflare/what-gets-created.html) | every Cloudflare object |
+| [Configuration](https://syan-dev.github.io/cloudflare-tmux/configuration.html) | variables, flags, files |
+| [Security model](https://syan-dev.github.io/cloudflare-tmux/security.html) | layers and hardening |
+| [Two-step code](https://syan-dev.github.io/cloudflare-tmux/two-step.html) | optional authenticator code |
 | [Operations](https://syan-dev.github.io/cloudflare-tmux/operations.html) | logs, updates, uninstall |
-| [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | common errors and fixes |
+| [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | errors and fixes |
 
 ## Development
 

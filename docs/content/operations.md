@@ -1,91 +1,71 @@
 ---
 title: Operations
-description: Status, logs, updates, restarts, and complete uninstall of cloudflare-tmux.
+description: Status, logs, restarts, updates, and a complete uninstall.
 ---
 
 # Operations
 
+The commands below are for the single-user install. The [multi-user](#multi-user-install) section at the end
+lists what differs.
+
 ## Status and logs
-
-In **single-user** mode both services are user services:
-
 
 ```bash
 systemctl --user status cloudflare-tmux cloudflare-tmux-cloudflared
-journalctl --user -u cloudflare-tmux -f          # logins, attach/detach, auth failures
-journalctl --user -u cloudflare-tmux-cloudflared -f
-```
-
-For **multi-user** mode the app is a system service:
-
-```bash
-systemctl status cloudflare-tmux
-journalctl -u cloudflare-tmux -f
-systemctl --user status cloudflare-tmux-cloudflared   # the tunnel is still a user service
+journalctl --user -u cloudflare-tmux -f               # logins, attach/detach, refusals
+journalctl --user -u cloudflare-tmux-cloudflared -f   # the tunnel
 ```
 
 Typical log lines:
 
 ```text
-cloudflare-tmux listening on http://127.0.0.1:7681 as root (multi-user); identities: alice@example.com→alice
+cloudflare-tmux listening on http://127.0.0.1:7681 as alice; identities: alice@example.com→alice
 attach alice/work by alice@example.com (pid 41233)
 detach alice/work by alice@example.com (ws 1001)
 auth rejected GET /: email not mapped: mallory@example.com
 ```
 
-You can also see the tunnel's health in Zero Trust → **Networks → Tunnels** (it should say *Healthy*).
+The tunnel's health also shows under **Zero Trust → Networks → Tunnels**. It should say *Healthy*.
 
-## Restarting
+## Restart
 
 ```bash
-systemctl --user restart cloudflare-tmux    # single-user
-sudo systemctl restart cloudflare-tmux      # multi-user
+systemctl --user restart cloudflare-tmux
 ```
 
-tmux sessions **survive** restarts, because the units use `KillMode=process`.
+tmux sessions survive restarts. The unit uses `KillMode=process`, so stopping the app never stops the tmux
+server.
 
-## Updating
+## Update the app
 
 ```bash
 cd cloudflare-tmux
 git pull
-scripts/setup.sh                                              # single-user
-sudo NODE_BIN="$(command -v node)" scripts/install-system.sh  # multi-user, after setup.sh
+scripts/setup.sh
 ```
 
-None of this needs the Cloudflare API token.
+No API token needed.
 
-### Updating `cloudflared`
+## Update cloudflared
 
-The tunnel unit runs `cloudflared` with `--no-autoupdate`, so update it yourself, for example monthly or
-when Cloudflare announces a security fix:
+The tunnel runs `cloudflared` with `--no-autoupdate`, so update it yourself, for example monthly or when
+Cloudflare announces a security fix:
 
 ```bash
 scripts/install-cloudflared.sh --restart
 ```
 
 It downloads the latest release to `~/.local/bin/cloudflared`, checks its SHA-256 against GitHub and
-Cloudflare's release notes, and restarts the tunnel only if the binary changed. If your `cloudflared`
-comes from a package manager, update it there instead and run
-`systemctl --user restart cloudflare-tmux-cloudflared`. No API token needed.
+Cloudflare's release notes, and restarts the tunnel only if the binary changed. No API token needed.
 
-## Changing who can log in
+If your `cloudflared` comes from a package manager, update it there instead and run
+`systemctl --user restart cloudflare-tmux-cloudflared`.
 
-Edit `IDENTITIES` in `~/.config/cloudflare-tmux/env`. Adding someone changes the Access policy on Cloudflare,
-so create a short-lived [API token](cloudflare/api-token.md) first (the setup token wasn't saved), then:
+## Add or remove a person
 
-```bash
-scripts/cloudflare.sh term.example.com   # updates the Access policy (asks for the API token)
-scripts/setup.sh                         # or install-system.sh in multi-user mode
-```
-
-**Removing someone in a hurry?** You don't need the token for that. Delete their entry from `IDENTITIES` and
-restart the app (`systemctl --user restart cloudflare-tmux`): it refuses them right away, even with a valid
-Cloudflare login. Clean up the Access policy later with a token. See
-[Security → If something goes wrong](security.md#if-something-goes-wrong).
-
-Changing only the Linux user of an email that's already listed doesn't touch Cloudflare, so a restart is
-enough there too. See [when you need the API token](cloudflare/api-token.md#when-you-need-it).
+See [Cloudflare login](cloudflare/cloudflare-login.md). In short: adding someone needs a short-lived API
+token, because it changes the Access policy. Locking someone out doesn't: remove them from `IDENTITIES` and
+restart the app.
 
 ## Uninstall
 
@@ -95,17 +75,43 @@ enough there too. See [when you need the API token](cloudflare/api-token.md#when
    systemctl --user disable --now cloudflare-tmux cloudflare-tmux-cloudflared
    rm ~/.config/systemd/user/cloudflare-tmux.service ~/.config/systemd/user/cloudflare-tmux-cloudflared.service
    systemctl --user daemon-reload
-
-   # multi-user only
-   sudo systemctl disable --now cloudflare-tmux
-   sudo rm -rf /etc/systemd/system/cloudflare-tmux.service /opt/cloudflare-tmux /etc/cloudflare-tmux
-   sudo systemctl daemon-reload
    ```
 
-2. Remove local secrets: `rm -f ~/.cloudflared/cloudflare-tmux.token`, and
-   `rm -r ~/.config/cloudflare-tmux` if you used the two-step code (`totp.json`).
-3. In the Cloudflare dashboard:
-   - **DNS** → delete the `term` CNAME record (do this first, so the hostname stops resolving),
-   - **Zero Trust → Access → Applications** → delete `cloudflare-tmux`,
-   - **Zero Trust → Networks → Tunnels** → delete `cloudflare-tmux`.
+2. Remove the local secrets:
+
+   ```bash
+   rm -f ~/.cloudflared/cloudflare-tmux.token
+   rm -r ~/.config/cloudflare-tmux        # config and two-step authenticators
+   ```
+
+3. In the Cloudflare dashboard, in this order:
+   - **DNS**: delete the `term` CNAME record, so the hostname stops resolving.
+   - **Zero Trust → Access → Applications**: delete `cloudflare-tmux`.
+   - **Zero Trust → Networks → Tunnels**: delete `cloudflare-tmux`.
+
 4. Your tmux sessions are untouched. End them with `tmux kill-server` if you want.
+
+## Multi-user install
+
+The app is a system service running as root. The tunnel is still a user service.
+
+```bash
+sudo systemctl status cloudflare-tmux
+sudo journalctl -u cloudflare-tmux -f
+sudo systemctl restart cloudflare-tmux
+```
+
+After `git pull`, run both of these. After changing only the config file, the second is enough:
+
+```bash
+scripts/setup.sh
+sudo NODE_BIN="$(command -v node)" scripts/install-system.sh
+```
+
+To uninstall, also run:
+
+```bash
+sudo systemctl disable --now cloudflare-tmux
+sudo rm -rf /etc/systemd/system/cloudflare-tmux.service /opt/cloudflare-tmux /etc/cloudflare-tmux
+sudo systemctl daemon-reload
+```

@@ -68,7 +68,7 @@ The installer checks the rest and downloads `cloudflared` for you.
 
 ## Who logs in
 
-Start with just yourself. To add people later, see [Cloudflare login](cloudflare/cloudflare-login.md). If each
-person needs their own Linux account, use the [multi-user install](install/multi-user.md).
+Start with just yourself. You can [add people](cloudflare/cloudflare-login.md) later, each with
+[their own Linux user](install/multi-user.md) if you like.
 
 Ready? Go to the [Quickstart](quickstart.md).

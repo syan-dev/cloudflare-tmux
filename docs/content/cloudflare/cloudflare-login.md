@@ -1,72 +1,88 @@
 ---
 title: Cloudflare login
-description: Sign in with your Cloudflare account - invite members, map their emails to Linux users, and protect the accounts with 2FA.
+description: Sign in with your Cloudflare account. Invite people as members, map their emails to Linux users, and protect the accounts with 2FA.
 ---
 
 # Cloudflare login
 
-cloudflare-tmux uses **Sign in with Cloudflare** as its only login method. Each person signs in with their
-**own Cloudflare account**, and Access only lets in accounts that are **members of your Cloudflare account**
-and whose email is in `IDENTITIES`. You don't need an OAuth client or any other identity provider.
+Everyone signs in with their own Cloudflare account. Cloudflare Access lets a person through only if they're a
+**member of your Cloudflare account** and their email is on your list of who may log in, `IDENTITIES` in the
+config file.
 
-People sign in to their Cloudflare account however Cloudflare allows: email and password, or Cloudflare's
-own Google or Apple sign-in options. Whatever they use, Access sees their Cloudflare account email.
+How they sign in to Cloudflare is up to them: a password, or Cloudflare's own Google or Apple sign-in.
+Access always sees their Cloudflare account email.
 
-## 1. Invite each person as a member
+## Add a person
 
-You (the account owner) are already a member. For everyone else:
+You're already a member of your own account. For everyone else:
 
-1. In the [Cloudflare dashboard](https://dash.cloudflare.com), go to **Manage Account → Members → Invite**.
-2. Enter the email of **their** Cloudflare account (they can create a free one).
-3. Role: **Minimal Account Access**. This makes them a member without letting them view or change your zones,
-   DNS, tunnels or Access settings. Don't give them an administrator or Zero Trust role.
-4. They accept the invitation from the email or from their own dashboard.
+1. **Invite them.** In the [Cloudflare dashboard](https://dash.cloudflare.com), go to
+   **Manage Account → Members → Invite** and enter the email of **their** Cloudflare account. They can create a
+   free one.
+2. **Give them the role Minimal Account Access.** That makes them a member without letting them see or change
+   your zones, tunnels or Access settings. Never give them an administrator or Zero Trust role.
+3. **Wait for them to accept** the invitation, from the email or from their own dashboard.
+4. **Add them to the list.** In `~/.config/cloudflare-tmux/env`, add `their-email:linux-user` to `IDENTITIES`.
+   People mapped to the same Linux user share its sessions.
+5. **Create a short-lived [API token](api-token.md#create-it).** The one from setup wasn't saved, and adding a
+   person changes the Access policy on Cloudflare.
+6. **Update Cloudflare and restart the app.** The first command asks for the token.
+
+   ```bash
+   scripts/cloudflare.sh term.example.com
+   scripts/setup.sh
+   ```
+
+7. **Delete the token** at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens).
+
+Being a member alone isn't enough. A member whose email isn't on the list is refused, both by Access and by
+the app.
 
 > [!NOTE]
-> After joining, the Cloudflare dashboard may open on **your** account, where almost everything is locked
-> for them. That's expected. They can switch back to their own account with the **account switcher** at the
-> top of the dashboard. Joining doesn't change anything in their own account.
+> After joining, the Cloudflare dashboard may open on **your** account, where almost everything is locked for
+> them. That's expected. The **account switcher** at the top of the dashboard takes them back to their own
+> account. Joining doesn't change anything in their own account.
 
-## 2. Map the email to a Linux user
+## Remove a person
 
-Add `their-email:linux-user` to `IDENTITIES` in `~/.config/cloudflare-tmux/env`, then re-run the setup so the Access policy and the app
-agree. This updates Cloudflare, so it needs an [API token](api-token.md#when-you-need-it):
+1. **Lock them out now.** Remove their entry from `IDENTITIES` and restart the app. No token needed.
 
-```bash
-scripts/cloudflare.sh term.example.com
-```
+   ```bash
+   systemctl --user restart cloudflare-tmux
+   ```
 
-The Access policy (**Mapped Cloudflare accounts**) allows exactly these emails, and the app checks them
-again after verifying the Access JWT. Being a member alone isn't enough: someone who is a member but isn't
-in `IDENTITIES` is refused.
+   From then on the app refuses them, even with a valid Cloudflare login.
+2. **Tidy up later.** Run `scripts/cloudflare.sh term.example.com` with a fresh [API token](api-token.md#create-it)
+   to take them out of the Access policy too.
+3. **Optionally** remove them under **Manage Account → Members**, and run `scripts/totp.js remove their@email`
+   if you use the [two-step code](../two-step.md).
 
-## 3. Turn on two-factor authentication
+Their tmux sessions keep running after the lockout. See
+[If something goes wrong](../security.md#if-something-goes-wrong) for a full cleanup.
 
-Each allowed Cloudflare account is now a key to a shell on your server, so protect it:
+> [!NOTE]
+> **Multi-user install:** create the Linux user first with `sudo adduser carol`. Then, wherever this page says
+> `scripts/setup.sh` or a restart, run `sudo NODE_BIN="$(command -v node)" scripts/install-system.sh` instead.
+> See [Multi-user install](../install/multi-user.md).
 
-- Each person turns on **two-factor authentication** in their Cloudflare profile (**My Profile →
-  Authentication**), with an authenticator app or a security key.
-- As the owner, you can make it mandatory: look for the option to **enforce two-factor authentication for
-  members** in your account's member settings (**Manage Account → Members** / account settings).
+## Protect the accounts
 
-For a second layer that you control on the server, add the app's [two-step code](../two-step.md).
+Every listed Cloudflare account is a key to a shell on your server.
 
-## What the setup script does
+- Ask each person to turn on **two-factor authentication** in their Cloudflare profile, under
+  **My Profile → Authentication**. An authenticator app or a security key both work.
+- As the owner, you can make it mandatory. Look for the option to **enforce two-factor authentication for
+  members** in your account's member settings.
+- For a second check that lives on your server, turn on the app's [two-step code](../two-step.md).
 
-`scripts/cloudflare.sh` finds the identity provider of type `cloudflare`, which Zero Trust usually creates
-for you. If it doesn't exist, the script creates it with `restrict_to_account_members` turned on. If the
-existing one isn't restricted to members, the script prints a warning: turn the restriction on in
-**Zero Trust → Settings → Authentication**, or anyone with a Cloudflare account and a listed email could
-sign in.
+## How the login method works
+
+`scripts/cloudflare.sh` uses Zero Trust's **Cloudflare** login method, the one labelled "Sign in with
+Cloudflare". Zero Trust usually creates it for you. If it's missing, the script creates it with
+**restrict to account members** turned on.
+
+If the existing login method isn't restricted to members, the script prints a warning. Turn the restriction
+on under **Zero Trust → Settings → Authentication**. Without it, Access checks only the email, not membership.
 
 The Access application allows only this login method and redirects straight to it. See
 [What gets created](what-gets-created.md).
-
-## Removing a person
-
-1. Remove their entry from `IDENTITIES` and restart the app (`systemctl --user restart cloudflare-tmux`,
-   or `install-system.sh` in multi-user mode). From then on the app refuses them, with no API token needed.
-2. Re-run `scripts/cloudflare.sh` with an [API token](api-token.md#when-you-need-it) to take them out of
-   the Access policy too.
-3. Optionally remove them under **Manage Account → Members**.
-4. If you use the two-step code: `scripts/totp.js remove their@email`.

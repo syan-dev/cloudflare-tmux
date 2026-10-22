@@ -17,7 +17,7 @@ const REPO = 'https://github.com/syan-dev/cloudflare-tmux';
 const SITE = 'cloudflare-tmux';
 
 const NAV = [
-  { section: 'Getting started', pages: ['index', 'quickstart', 'prerequisites'] },
+  { section: 'Getting started', pages: ['index', 'prerequisites', 'quickstart'] },
   { section: 'Cloudflare', pages: ['cloudflare/cloudflare-login', 'cloudflare/api-token', 'cloudflare/what-gets-created'] },
   { section: 'Install', pages: ['install/single-user', 'install/multi-user'] },
   { section: 'Guides', pages: ['configuration', 'usage', 'security', 'two-step', 'operations', 'troubleshooting', 'development'] },
@@ -144,7 +144,7 @@ function hero(id) {
       <div class="lg:w-1/2">
         <p class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">Cloudflare Tunnel · Zero Trust Access · tmux</p>
         <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl dark:text-white">Your tmux sessions,<br><span class="bg-gradient-to-r from-brand-500 to-amber-400 bg-clip-text text-transparent">in any browser.</span></h1>
-        <p class="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-300">Open a terminal on your server from your phone or laptop. Nothing is exposed to the internet: traffic comes in through a Cloudflare Tunnel, and you sign in with your Cloudflare account through Cloudflare Access. Close the tab and your programs keep running.</p>
+        <p class="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-300">Open a terminal on your server from your phone or laptop. Nothing is exposed to the internet. You sign in with your Cloudflare account, and your programs keep running when you close the tab.</p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a href="${rel(id, 'quickstart')}" class="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600">Get started in 5 minutes →</a>
           <a href="${REPO}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">${ICONS.github} GitHub</a>
