@@ -39,16 +39,20 @@ You need three things, all on free plans:
 
 Your domain must use Cloudflare for DNS. The installer adds the `term.` subdomain itself.
 
-- **Have it?** It shows **Active** in the [Cloudflare dashboard](https://dash.cloudflare.com).
-- **Not yet?** Choose **Add a domain** (Free plan), then set the two nameservers Cloudflare gives you at your
-  registrar. [Cloudflare's guide](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/).
+1. [Create a Cloudflare account](https://developers.cloudflare.com/fundamentals/account/create-account/) (free).
+2. [Add your domain](https://developers.cloudflare.com/fundamentals/manage-domains/add-site/) on the Free plan.
+3. [Change its nameservers](https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/) at your registrar to the two Cloudflare gives you.
+
+Done when the domain shows **Active** in the [dashboard](https://dash.cloudflare.com)
+([what the statuses mean](https://developers.cloudflare.com/dns/zone-setups/reference/domain-status/)).
 
 ## 2. Zero Trust turned on
 
-Zero Trust provides the login page. In the dashboard, open **Zero Trust**, pick a **team name** (your login page
-becomes `<team>.cloudflareaccess.com`) and choose the **Free** plan. It may ask for a card, but Free costs nothing.
+Zero Trust provides the login page. Follow
+[Get started with Cloudflare Zero Trust](https://developers.cloudflare.com/cloudflare-one/setup/): pick a
+**team name** and the **Free** plan. That's all; the installer sets up the rest.
 
-Already on if **Zero Trust** opens without asking for a team name.
+Done when **Zero Trust** in the dashboard opens without asking for a team name.
 
 ## 3. A Linux server
 
@@ -59,8 +63,8 @@ sudo apt install tmux nodejs npm build-essential python3 curl   # Debian / Ubunt
 sudo dnf install tmux nodejs npm gcc-c++ make python3 curl      # Fedora / RHEL
 ```
 
-`node -v` must print **v18** or newer; if not, install Node with [nvm](https://github.com/nvm-sh/nvm). The
-installer checks all of this and downloads `cloudflared` for you.
+Done when `node -v` prints **v18** or newer (if not, [install Node.js](https://nodejs.org/en/download)).
+The installer checks the rest and downloads `cloudflared` for you.
 
 ## Who logs in
 
