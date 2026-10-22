@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Installs cloudflare-tmux + its Cloudflare Tunnel as systemd user services.
-# Run scripts/cloudflare.sh first (creates .env and ~/.cloudflared/cloudflare-tmux.token).
+# Run scripts/cloudflare.sh first (writes ~/.config/cloudflare-tmux/env and ~/.cloudflared/cloudflare-tmux.token).
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/config.sh
+. "$APP_DIR/scripts/config.sh"
 CLOUDFLARED="$(command -v cloudflared || echo "$HOME/.local/bin/cloudflared")"
 NODE="$(command -v node)"
 UNIT_DIR="$HOME/.config/systemd/user"
 
 [ -x "$CLOUDFLARED" ] || { echo "cloudflared not found"; exit 1; }
 [ -s "$HOME/.cloudflared/cloudflare-tmux.token" ] || { echo "Missing tunnel token; run scripts/cloudflare.sh"; exit 1; }
-[ -f "$APP_DIR/.env" ] || { echo "Missing .env; run scripts/cloudflare.sh"; exit 1; }
+[ -f "$ENV_FILE" ] || { echo "Missing $ENV_FILE; run scripts/cloudflare.sh"; exit 1; }
 
 cd "$APP_DIR"
 npm ci --omit=dev --silent

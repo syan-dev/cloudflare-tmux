@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Installs cloudflare-tmux as a root system service so each mapped Cloudflare account email gets its own Linux user.
 # Usage: sudo NODE_BIN="$(command -v node)" scripts/install-system.sh
-# Mapping comes from IDENTITIES in .env (email:linuxuser,...).
+# Config comes from the invoking user's ~/.config/cloudflare-tmux/env (or ENV_FILE); mapping is IDENTITIES.
 # The app is copied to /opt/cloudflare-tmux (root-owned), so no user can modify code that runs as root.
 set -euo pipefail
 
@@ -11,8 +11,13 @@ OWNER="${SUDO_USER:-}"
 NODE_BIN="${NODE_BIN:-$(command -v node)}"
 "$NODE_BIN" -e 'process.exit(+process.versions.node.split(".")[0] >= 18 ? 0 : 1)' || \
   { echo "Need Node >= 18: pass NODE_BIN=\$(command -v node)"; exit 1; }
-[ -f "$SRC/.env" ] || { echo "Missing $SRC/.env (run scripts/cloudflare.sh first)"; exit 1; }
-grep -q '^IDENTITIES=.' "$SRC/.env" || { echo "Set IDENTITIES=email:linuxuser,... in $SRC/.env"; exit 1; }
+if [ -z "${ENV_FILE:-}" ]; then
+  OWNER_HOME="$(getent passwd "${OWNER:-root}" | cut -d: -f6)"
+  ENV_FILE="$OWNER_HOME/.config/cloudflare-tmux/env"
+  [ -f "$ENV_FILE" ] || ENV_FILE="$SRC/.env"
+fi
+[ -f "$ENV_FILE" ] || { echo "Missing $ENV_FILE (run scripts/cloudflare.sh first)"; exit 1; }
+grep -q '^IDENTITIES=.' "$ENV_FILE" || { echo "Set IDENTITIES=email:linuxuser,... in $ENV_FILE"; exit 1; }
 
 # 1. Root-owned copy of the app and node binary
 install -d -m 755 -o root -g root /opt/cloudflare-tmux /opt/cloudflare-tmux/bin
@@ -27,7 +32,7 @@ chmod -R go-w /opt/cloudflare-tmux
 
 # 2. Config (root-only)
 install -d -m 700 /etc/cloudflare-tmux
-grep -v -E '^(AUTH_DISABLED)=' "$SRC/.env" > /etc/cloudflare-tmux/env
+grep -v -E '^(AUTH_DISABLED)=' "$ENV_FILE" > /etc/cloudflare-tmux/env
 chmod 600 /etc/cloudflare-tmux/env
 
 # 3. systemd unit

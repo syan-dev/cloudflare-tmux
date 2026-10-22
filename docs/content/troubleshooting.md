@@ -20,7 +20,7 @@ The app rejected the Access JWT. The log line `auth rejected ...: <reason>` tell
 |---|---|
 | `missing Access token` | The request didn't come through Access. Check that the Access application covers exactly this hostname. |
 | `email not mapped: x@y` | Add `x@y:user` to `IDENTITIES`, then re-run `cloudflare.sh` and `setup.sh` / `install-system.sh`. |
-| `unexpected "aud" claim value` | `CF_ACCESS_AUD` in `.env` doesn't match the app. Re-run `scripts/cloudflare.sh <host>` and restart. |
+| `unexpected "aud" claim value` | `CF_ACCESS_AUD` in `~/.config/cloudflare-tmux/env` doesn't match the app. Re-run `scripts/cloudflare.sh <host>` and restart. |
 | `unexpected "iss" claim value` | `CF_TEAM_DOMAIN` is wrong (did you rename your team?). Re-run `cloudflare.sh`. |
 | `Linux user u does not exist` | Create the user, or fix the mapping. |
 | `mapped to u, but the server runs as me` | Single-user mode can only serve your own user. Use `--multi-user`. |
@@ -66,7 +66,7 @@ curl -i http://127.0.0.1:7681/      # expect 401 Unauthorized (no Access token) 
 
 ## App won't start: "Set CF_TEAM_DOMAIN, CF_ACCESS_AUD and IDENTITIES"
 
-`.env` is missing values. Run `scripts/cloudflare.sh <host>`, which fills in the first two. In multi-user mode,
+`~/.config/cloudflare-tmux/env` is missing values. Run `scripts/cloudflare.sh <host>`, which fills in the first two. In multi-user mode,
 the running config is `/etc/cloudflare-tmux/env`; re-run `install-system.sh` to refresh it.
 
 ## `npm ci` fails building node-pty

@@ -9,6 +9,9 @@
   login, enrolled on the server with `scripts/totp.js`.
 - **Copy and paste** in the terminal: tmux copies reach the browser clipboard (OSC 52, tmux 3.2+);
   Ctrl+Shift+C / Cmd+C copy a selection, Ctrl+Shift+V pastes.
+- **Config moved out of the code** to `~/.config/cloudflare-tmux/env` (directory `700`, file `600`).
+  An existing `.env` is moved there by the setup scripts and still read if left in place. The hostname and
+  tunnel name are saved too, so re-running `install.sh` or `cloudflare.sh` reuses the same tunnel.
 
 ## 0.1.0 (2026-10-22)
 

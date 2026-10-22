@@ -16,7 +16,7 @@ const ME = require('os').userInfo().username;
 
 function startServer(port, env) {
   const proc = spawn(process.execPath, ['server.js'], {
-    cwd: ROOT, env: { ...process.env, PORT: String(port), ...env }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: ROOT, env: { ...process.env, ENV_FILE: '', PORT: String(port), ...env }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   return new Promise((resolve, reject) => {
     proc.stdout.on('data', (d) => { if (/listening/.test(d)) resolve(proc); });
@@ -109,7 +109,7 @@ async function main() {
 
   // Bad identity mappings stop the server from starting.
   const startFails = (env) => new Promise((resolve) => {
-    const proc = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, PORT: '17699', ...env }, stdio: 'ignore' });
+    const proc = spawn(process.execPath, ['server.js'], { cwd: ROOT, env: { ...process.env, ENV_FILE: '', PORT: '17699', ...env }, stdio: 'ignore' });
     const t = setTimeout(() => { proc.kill(); resolve(false); }, 3000);
     proc.on('exit', (code) => { clearTimeout(t); resolve(code !== 0); });
   });

@@ -58,7 +58,7 @@ over the old one, or use your package manager, then `systemctl --user restart cl
 
 ## Changing who can log in
 
-Edit `IDENTITIES` in `.env`, then:
+Edit `IDENTITIES` in `~/.config/cloudflare-tmux/env`, then:
 
 ```bash
 scripts/cloudflare.sh term.example.com   # updates the Access policy

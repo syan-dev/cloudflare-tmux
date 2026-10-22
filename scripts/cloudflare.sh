@@ -1,28 +1,33 @@
 #!/usr/bin/env bash
 # Idempotently provisions the Cloudflare side via API:
 #   tunnel (remotely managed) + ingress, Cloudflare login, Access application + allow policy, DNS CNAME.
-# Usage: scripts/cloudflare.sh term.example.com
-# Allowed people come from IDENTITIES in .env (email:linuxuser,...).
+# Usage: scripts/cloudflare.sh [term.example.com]   (default: PUBLIC_HOST from the config)
+# Config: ~/.config/cloudflare-tmux/env (see scripts/config.sh). Allowed people come from IDENTITIES
+#   (email:linuxuser,...). The hostname and tunnel name are saved there, so re-runs reuse the same tunnel.
 # Login: "Sign in with Cloudflare", restricted to members of your Cloudflare account. Each allowed
 #   person needs their own Cloudflare account, invited as a member of yours (Minimal Account Access).
 # Needs an API token in $CF_API_TOKEN or ~/.cloudflare-token with:
 #   Account: Cloudflare Tunnel: Edit, Account: Access: Apps and Policies: Edit,
 #   Account: Access: Organizations, Identity Providers, and Groups: Edit, Zone: DNS: Edit
-# Optional env: ZONE_NAME (default: hostname minus its first label), TUNNEL_NAME, PORT.
+# Optional env: ZONE_NAME (default: hostname minus its first label), TUNNEL_NAME (default: saved, else
+#   cloudflare-tmux), PORT.
 set -euo pipefail
 
-HOST="${1:?usage: $0 <hostname>}"
+APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/config.sh
+. "$APP_DIR/scripts/config.sh"
+
+HOST="${1:-$(env_get PUBLIC_HOST)}"
+[ -n "$HOST" ] || { echo "usage: $0 <hostname>"; exit 1; }
 ZONE_NAME="${ZONE_NAME:-${HOST#*.}}"
+TUNNEL_NAME="${TUNNEL_NAME:-$(env_get TUNNEL_NAME)}"
 TUNNEL_NAME="${TUNNEL_NAME:-cloudflare-tmux}"
 PORT="${PORT:-7681}"
 API=https://api.cloudflare.com/client/v4
 if [ -n "${CF_API_TOKEN:-}" ]; then TOKEN="$CF_API_TOKEN"
 elif [ -s "$HOME/.cloudflare-token" ]; then TOKEN="$(tr -d '[:space:]' < "$HOME/.cloudflare-token")"
 else echo "No API token: set CF_API_TOKEN or save it to ~/.cloudflare-token (chmod 600)"; exit 1; fi
-APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="$APP_DIR/.env"
-
-IDENTITIES="$(sed -n 's/^IDENTITIES=//p' "$ENV_FILE" 2>/dev/null | tail -1)"
+IDENTITIES="$(env_get IDENTITIES)"
 [ -n "$IDENTITIES" ] || { echo "Set IDENTITIES=email:linuxuser,... in $ENV_FILE"; exit 1; }
 EMAILS_JSON="$(python3 -c 'import sys,json
 print(json.dumps([{"email":{"email":e.rsplit(":",1)[0].strip().lower()}} for e in sys.argv[1].split(",") if e.strip()]))' "$IDENTITIES")"
@@ -91,10 +96,9 @@ else cf PUT "/zones/$ZONE_ID/dns_records/$REC_ID" "$REC" >/dev/null; fi
 echo "dns $HOST -> $TARGET"
 
 # 5. App config
-[ -f "$ENV_FILE" ] || cp "$APP_DIR/.env.example" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
-set_env() { grep -q "^$1=" "$ENV_FILE" && sed -i "s#^$1=.*#$1=$2#" "$ENV_FILE" || echo "$1=$2" >> "$ENV_FILE"; }
-set_env PORT "$PORT"
-set_env CF_TEAM_DOMAIN "$TEAM_DOMAIN"
-set_env CF_ACCESS_AUD "$AUD"
+env_set PUBLIC_HOST "$HOST"
+env_set TUNNEL_NAME "$TUNNEL_NAME"
+env_set PORT "$PORT"
+env_set CF_TEAM_DOMAIN "$TEAM_DOMAIN"
+env_set CF_ACCESS_AUD "$AUD"
 echo "wrote $ENV_FILE"

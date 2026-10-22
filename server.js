@@ -18,7 +18,10 @@ const pty = require('node-pty');
 const { createRemoteJWKSet, jwtVerify } = require('jose');
 const totp = require('./lib/totp');
 
-loadEnvFile(path.join(__dirname, '.env'));
+// Config lives outside the code (~/.config/cloudflare-tmux/env); a .env next to server.js still works.
+// The multi-user service gets /etc/cloudflare-tmux/env from systemd instead. ENV_FILE overrides ('' = none).
+loadEnvFile('ENV_FILE' in process.env ? process.env.ENV_FILE
+  : [path.join(os.homedir(), '.config', 'cloudflare-tmux', 'env'), path.join(__dirname, '.env')].find((f) => fs.existsSync(f)));
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 7681);
@@ -69,6 +72,7 @@ const TMUX_CLIPBOARD = (() => {
 if (!TMUX_CLIPBOARD) console.warn('tmux < 3.2: copying from tmux to the browser clipboard is disabled');
 
 function loadEnvFile(file) {
+  if (!file) return;
   let text;
   try { text = fs.readFileSync(file, 'utf8'); } catch { return; }
   for (const line of text.split('\n')) {

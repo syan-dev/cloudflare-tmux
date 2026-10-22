@@ -8,7 +8,8 @@
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
-ENV_FILE="$APP_DIR/.env"
+# shellcheck source=scripts/config.sh
+. "$APP_DIR/scripts/config.sh"
 TOKEN_FILE="$HOME/.cloudflare-token"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
 dl="" token=""
@@ -80,13 +81,11 @@ fi
 
 # ---------- 2. configuration ----------
 bold "2/4 Configuration"
-[ -f "$ENV_FILE" ] || cp "$APP_DIR/.env.example" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
-current_ids="$(sed -n 's/^IDENTITIES=//p' "$ENV_FILE" | tail -1)"
+current_ids="$(env_get IDENTITIES)"
 [ "$current_ids" = "you@example.com:youruser" ] && current_ids=""
 
 HOST="$HOST_ARG"
-[ -n "$HOST" ] || ask HOST "Hostname to serve on (a subdomain of a zone in your Cloudflare account)" "${CF_TMUX_HOST:-}"
+[ -n "$HOST" ] || ask HOST "Hostname to serve on (a subdomain of a zone in your Cloudflare account)" "$(env_get PUBLIC_HOST)"
 [[ "$HOST" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]] || { echo "Invalid hostname: $HOST"; exit 1; }
 
 IDENTITIES="$IDENTITIES_ARG"
@@ -96,16 +95,7 @@ if [ -z "$IDENTITIES" ]; then
   ask IDENTITIES "Who may log in? cloudflare-account-email:linux-user[,more...]" "$default_ids"
 fi
 [ -n "$IDENTITIES" ] || { echo "IDENTITIES is required"; exit 1; }
-if grep -q '^IDENTITIES=' "$ENV_FILE"; then
-  python3 - "$ENV_FILE" "$IDENTITIES" <<'PY'
-import sys
-path, ids = sys.argv[1], sys.argv[2]
-lines = open(path).read().splitlines()
-open(path, "w").write("\n".join(f"IDENTITIES={ids}" if l.startswith("IDENTITIES=") else l for l in lines) + "\n")
-PY
-else
-  echo "IDENTITIES=$IDENTITIES" >> "$ENV_FILE"
-fi
+env_set IDENTITIES "$IDENTITIES"
 ok "IDENTITIES=$IDENTITIES"
 
 if [ "$MULTI_USER" -eq 0 ]; then
@@ -145,7 +135,7 @@ bold "4/4 Installing services"
 if [ "$MULTI_USER" -eq 1 ]; then
   # The tunnel stays a user service; the app runs as root so it can serve several Linux users.
   "$APP_DIR/scripts/setup.sh"
-  sudo NODE_BIN="$(command -v node)" "$APP_DIR/scripts/install-system.sh"
+  sudo NODE_BIN="$(command -v node)" ENV_FILE="$ENV_FILE" "$APP_DIR/scripts/install-system.sh"
 else
   "$APP_DIR/scripts/setup.sh"
 fi

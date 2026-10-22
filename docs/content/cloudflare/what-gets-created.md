@@ -43,7 +43,7 @@ A **self-hosted** Access application for the hostname:
 | Cookie | `HttpOnly`, `SameSite=Lax` | the token isn't readable by page scripts |
 | Policy "Mapped Cloudflare accounts" | **Allow**, include = each email in `IDENTITIES` | only listed people get in |
 
-The script then reads the application's **AUD tag** and your **team domain** and writes them to `.env` as
+The script then reads the application's **AUD tag** and your **team domain** and writes them to `~/.config/cloudflare-tmux/env` as
 `CF_ACCESS_AUD` and `CF_TEAM_DOMAIN`, which the app uses to verify JWTs.
 
 > [!IMPORTANT]
@@ -57,7 +57,7 @@ If a record with that name already exists, it's **replaced**, so don't pick a ho
 
 ## 5. Local config
 
-`.env` (mode `600`) gets `PORT`, `CF_TEAM_DOMAIN` and `CF_ACCESS_AUD`. `IDENTITIES` is whatever you entered.
+`~/.config/cloudflare-tmux/env` (mode `600`) gets `PUBLIC_HOST`, `TUNNEL_NAME`, `PORT`, `CF_TEAM_DOMAIN` and `CF_ACCESS_AUD`. `IDENTITIES` is whatever you entered.
 
 ## Doing it by hand
 
@@ -70,7 +70,7 @@ If you'd rather not give the script an API token, you can make the same setup in
    This also creates the DNS record.
 3. **Zero Trust → Access → Applications → Add → Self-hosted**: domain `term.example.com`, login method
    Cloudflare only, instant auth on. Add an **Allow** policy with **Include → Emails** for each person.
-4. Copy the application's **Application Audience (AUD) Tag** into `.env` as `CF_ACCESS_AUD`, and set
+4. Copy the application's **Application Audience (AUD) Tag** into `~/.config/cloudflare-tmux/env` as `CF_ACCESS_AUD`, and set
    `CF_TEAM_DOMAIN=<team>.cloudflareaccess.com` and `IDENTITIES=...`.
 5. Run `scripts/setup.sh` (and `scripts/install-system.sh` for multi-user).
 

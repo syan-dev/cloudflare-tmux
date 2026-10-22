@@ -44,7 +44,7 @@ misconfigured.
    sudo /opt/cloudflare-tmux/bin/node /opt/cloudflare-tmux/scripts/totp.js add you@example.com
    ```
 
-2. Add `TOTP=required` to `.env` (multi-user: re-run `install-system.sh`, which copies it to
+2. Add `TOTP=required` to `~/.config/cloudflare-tmux/env` (multi-user: re-run `install-system.sh`, which copies it to
    `/etc/cloudflare-tmux/env`), then restart the app:
 
    ```bash

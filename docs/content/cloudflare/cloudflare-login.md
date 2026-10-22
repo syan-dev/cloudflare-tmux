@@ -29,7 +29,7 @@ You (the account owner) are already a member. For everyone else:
 
 ## 2. Map the email to a Linux user
 
-Add `their-email:linux-user` to `IDENTITIES` in `.env`, then re-run the setup so the Access policy and the app
+Add `their-email:linux-user` to `IDENTITIES` in `~/.config/cloudflare-tmux/env`, then re-run the setup so the Access policy and the app
 agree:
 
 ```bash

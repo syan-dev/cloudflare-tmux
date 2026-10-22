@@ -20,10 +20,11 @@ The installer only runs these scripts in order, so you can also run them yoursel
 
 ```bash
 # 1. who may log in
-cp .env.example .env
-sed -i "s/^IDENTITIES=.*/IDENTITIES=you@example.com:$USER/" .env
+mkdir -p -m 700 ~/.config/cloudflare-tmux
+install -m 600 .env.example ~/.config/cloudflare-tmux/env
+sed -i "s/^IDENTITIES=.*/IDENTITIES=you@example.com:$USER/" ~/.config/cloudflare-tmux/env
 
-# 2. Cloudflare: tunnel, Cloudflare login, Access app, DNS (writes CF_TEAM_DOMAIN / CF_ACCESS_AUD to .env)
+# 2. Cloudflare: tunnel, Cloudflare login, Access app, DNS (writes CF_TEAM_DOMAIN / CF_ACCESS_AUD to the config)
 scripts/cloudflare.sh term.example.com
 
 # 3. services
@@ -47,7 +48,7 @@ scripts/setup.sh
 
 | Path | What |
 |---|---|
-| `./.env` | app config (`600`) |
+| `~/.config/cloudflare-tmux/env` | app config (`600`) |
 | `~/.cloudflared/cloudflare-tmux.token` | tunnel run token (`600`) |
 | `~/.cloudflare-token` | API token, only used by the setup scripts (`600`) |
 | `~/.config/systemd/user/cloudflare-tmux*.service` | units |

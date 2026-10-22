@@ -16,8 +16,10 @@ const readline = require('readline');
 const { execFileSync } = require('child_process');
 const totp = require('../lib/totp');
 
-// Pick up TOTP_FILE from the app's .env (single-user) or /etc/cloudflare-tmux/env (multi-user).
-for (const file of [path.join(__dirname, '..', '.env'), '/etc/cloudflare-tmux/env']) {
+// Pick up TOTP_FILE from the app config (single-user) or /etc/cloudflare-tmux/env (multi-user).
+const os = require('os');
+for (const file of [path.join(os.homedir(), '.config', 'cloudflare-tmux', 'env'), path.join(__dirname, '..', '.env'),
+  '/etc/cloudflare-tmux/env']) {
   let text;
   try { text = fs.readFileSync(file, 'utf8'); } catch { continue; }
   const m = text.match(/^\s*TOTP_FILE\s*=\s*(.+?)\s*$/m);

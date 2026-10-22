@@ -30,7 +30,7 @@ Each Linux user must already exist and have a login shell (`sudo adduser alice`)
 A root service must not run code that a normal user can edit. `scripts/install-system.sh` therefore:
 
 1. copies `server.js`, `public/`, `node_modules/` and the `node` binary into **`/opt/cloudflare-tmux`**, owned by root and not writable by anyone else,
-2. copies `.env` to **`/etc/cloudflare-tmux/env`** (directory `700`, file `600`), dropping `AUTH_DISABLED`,
+2. copies `~/.config/cloudflare-tmux/env` to **`/etc/cloudflare-tmux/env`** (directory `700`, file `600`), dropping `AUTH_DISABLED`,
 3. installs `/etc/systemd/system/cloudflare-tmux.service` and **disables the single-user app service** so they don't both claim port 7681.
 
 > [!IMPORTANT]
@@ -48,5 +48,5 @@ A root service must not run code that a normal user can edit. `scripts/install-s
 1. `sudo adduser carol` (if needed).
 2. Invite carol's Cloudflare account as a member of yours with **Minimal Account Access**
    ([Cloudflare login](../cloudflare/cloudflare-login.md)).
-3. Add or remove `carol@example.com:carol` in `IDENTITIES` in `.env`.
+3. Add or remove `carol@example.com:carol` in `IDENTITIES` in `~/.config/cloudflare-tmux/env`.
 4. Run the two commands above. Removing an email takes them out of the Access policy **and** the app's own allow-list.

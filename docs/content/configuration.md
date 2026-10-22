@@ -5,10 +5,13 @@ description: Every environment variable and file cloudflare-tmux and its scripts
 
 # Configuration
 
-## App (`.env`)
+## App config (`~/.config/cloudflare-tmux/env`)
 
-The app reads `.env` from its own directory, or `/etc/cloudflare-tmux/env` in multi-user mode. Real
-environment variables take priority over the file.
+The config lives outside the code, in `~/.config/cloudflare-tmux/env` (directory `700`, file `600`), so updating or
+re-cloning the repo never touches it. The multi-user service reads `/etc/cloudflare-tmux/env` instead.
+An older `.env` next to `server.js` still works, and the setup scripts move it to `~/.config/cloudflare-tmux/env`.
+Real environment variables take priority over the file. `ENV_FILE=/path` points the app and the scripts
+at a different file.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -20,6 +23,8 @@ environment variables take priority over the file.
 | `TOTP` | `off` | `required` turns on the [two-step code](two-step.md): after Cloudflare login, the app asks for a 6-digit authenticator code. |
 | `TOTP_SESSION_HOURS` | `12` | How long a verified code lasts before the app asks again (1–720). |
 | `TOTP_FILE` | `~/.config/cloudflare-tmux/totp.json` (root: `/etc/cloudflare-tmux/totp.json`) | Enrolled authenticators and the cookie-signing key (mode `600`). Managed with `scripts/totp.js`. |
+| `PUBLIC_HOST` | — | The public hostname. Saved by `cloudflare.sh`, so re-runs don't ask again. |
+| `TUNNEL_NAME` | `cloudflare-tmux` | The Cloudflare tunnel to use. Saved by `cloudflare.sh`, so re-runs keep using the same tunnel. |
 | `AUTH_DISABLED` | unset | `1` turns off the Access check and acts as the current user. **Local development only**; refused when running as root. |
 
 The app **won't start** unless `CF_TEAM_DOMAIN`, `CF_ACCESS_AUD` and `IDENTITIES` are set (or `AUTH_DISABLED=1`).
@@ -41,8 +46,9 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 |---|---|---|
 | `CF_API_TOKEN` | `cloudflare.sh`, `install.sh` | API token. If unset, read from `~/.cloudflare-token`. |
 | `ZONE_NAME` | `cloudflare.sh` | Zone that holds the hostname. Defaults to the hostname minus its first label. |
-| `TUNNEL_NAME` | `cloudflare.sh` | Tunnel name (default `cloudflare-tmux`). Use a different name per machine if you install on several. |
-| `PORT` | `cloudflare.sh` | Local port in the tunnel ingress and `.env` (default `7681`). |
+| `TUNNEL_NAME` | `cloudflare.sh` | Tunnel name (default: the saved one, else `cloudflare-tmux`). Use a different name per machine if you install on several. |
+| `PORT` | `cloudflare.sh` | Local port in the tunnel ingress and the config (default `7681`). |
+| `ENV_FILE` | all | Config file to use instead of `~/.config/cloudflare-tmux/env`. |
 | `NODE_BIN` | `install-system.sh` | Node binary to copy into `/opt/cloudflare-tmux` (default `command -v node`). |
 
 ## `install.sh` flags
@@ -59,8 +65,8 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 
 | Path | Mode | Contents |
 |---|---|---|
-| `.env` | 600 | app config |
-| `~/.cloudflare-token` | 600 | API token (setup only) |
+| `~/.config/cloudflare-tmux/env` | 600 (dir 700) | app config |
+| `~/.cloudflare-token` | 600 | API token (setup only; delete it after setup and revoke the token in Cloudflare when you don't need it) |
 | `~/.cloudflared/cloudflare-tmux.token` | 600 | tunnel run token |
 | `/opt/cloudflare-tmux/` | root, 755 | app copy (multi-user) |
 | `/etc/cloudflare-tmux/env` | root, 600 | app config (multi-user) |
