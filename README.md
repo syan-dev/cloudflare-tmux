@@ -91,7 +91,7 @@ Full docs: **https://syan-dev.github.io/cloudflare-tmux/**
 | [Security model](https://syan-dev.github.io/cloudflare-tmux/security.html) | layers and hardening |
 | [Two-step code](https://syan-dev.github.io/cloudflare-tmux/two-step.html) | optional authenticator code |
 | [Operations](https://syan-dev.github.io/cloudflare-tmux/operations.html) | logs, updates, uninstall |
-| [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | errors and fixes |
+| [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | `./install.sh doctor`, errors and fixes |
 
 ## Development
 

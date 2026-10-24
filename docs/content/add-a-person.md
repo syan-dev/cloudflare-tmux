@@ -95,7 +95,8 @@ Authentication**. Their Cloudflare account is now a key to a shell on your serve
 | Cloudflare's "Access denied" page | Their email isn't in the Cloudflare policy. | Run `./install.sh add` again with a token. |
 | "Not signed in" page from the app | The app's list doesn't have them, or the mapping is wrong. The page says what to ask you for. | Run `./install.sh list` to check, then `./install.sh add`. |
 
-More in [Troubleshooting](troubleshooting.md).
+When in doubt, run `./install.sh doctor` on the server. It checks every mapped person, both services and the
+public URL, and prints the fix next to anything wrong. More in [Troubleshooting](troubleshooting.md).
 
 ## Remove a person
 

@@ -61,6 +61,15 @@ Cloudflare's release notes, and restarts the tunnel only if the binary changed. 
 If your `cloudflared` comes from a package manager, update it there instead and run
 `systemctl --user restart cloudflare-tmux-cloudflared`.
 
+## Check the install
+
+```bash
+./install.sh doctor
+```
+
+One line per check, with the fix next to anything that fails. Run it after a reboot, after changing the config,
+or when someone can't get in.
+
 ## Add or remove a person
 
 ```bash

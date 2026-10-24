@@ -5,6 +5,7 @@
 #        ./install.sh add <cloudflare-email> [linux-user]    let someone log in
 #        ./install.sh remove <cloudflare-email>              lock someone out
 #        ./install.sh list                                   who may log in
+#        ./install.sh doctor                                 check the install and say what to fix
 #
 # Setup checks prerequisites, asks for what it needs, provisions Cloudflare (scripts/cloudflare.sh) and
 # installs the services (scripts/setup.sh, or scripts/install-system.sh when people map to other Linux users).
@@ -16,8 +17,8 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
 dl="" token="" use_multi=""
 
-usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
-case "${1:-}" in add|remove|list) exec "$APP_DIR/scripts/people.sh" "$@" ;; esac
+usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+case "${1:-}" in add|remove|list) exec "$APP_DIR/scripts/people.sh" "$@" ;; doctor) exec "$APP_DIR/scripts/doctor.sh" ;; esac
 while [ $# -gt 0 ]; do
   case "$1" in
     --host) HOST_ARG="${2:?--host needs a value}"; shift 2 ;;

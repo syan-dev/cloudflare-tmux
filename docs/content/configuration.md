@@ -48,6 +48,7 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 |---|---|
 | `./install.sh` | The whole setup. Safe to re-run. |
 | `./install.sh add\|remove\|list` | Add or remove a person, or list who may log in. Implemented in `scripts/people.sh`. |
+| `./install.sh doctor` | Checks the whole install and prints the fix for anything wrong. Implemented in `scripts/doctor.sh`. |
 | `scripts/cloudflare.sh <host>` | Creates or updates everything on Cloudflare from the config. Needs an API token. |
 | `scripts/setup.sh` | Installs or restarts the user services. Single-user install. |
 | `scripts/install-system.sh` | Installs or restarts the root app service. Multi-user install. Run with `sudo`. |
@@ -55,7 +56,7 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 
 | Variable | Used by | Description |
 |---|---|---|
-| `CF_API_TOKEN` | `cloudflare.sh`, `install.sh`, `people.sh` | The [API token](cloudflare/api-token.md). If unset, the scripts ask for it. Never saved. Set it only for unattended runs. |
+| `CF_API_TOKEN` | `cloudflare.sh`, `install.sh`, `people.sh`, `doctor.sh` | The [API token](cloudflare/api-token.md). If unset, the scripts ask for it. Never saved. Set it only for unattended runs. |
 | `ZONE_NAME` | `cloudflare.sh` | Zone that holds the hostname. Defaults to the hostname minus its first label. |
 | `TUNNEL_NAME` | `cloudflare.sh` | Tunnel name. Defaults to the saved one, else `cloudflare-tmux`. Use a different name per machine. |
 | `PORT` | `cloudflare.sh` | Local port for the tunnel and the config. Default `7681`. |

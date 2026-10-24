@@ -5,7 +5,15 @@ description: Fixes for common cloudflare-tmux problems - 401 errors, unmapped em
 
 # Troubleshooting
 
-Start with the logs. They almost always name the problem:
+Start with one command. It checks the config, every mapped person, both services, boot settings, the local
+and public URLs, and prints the fix next to anything that fails:
+
+```bash
+./install.sh doctor
+CF_API_TOKEN=... ./install.sh doctor     # also compares the Cloudflare Access policy with your list
+```
+
+If that passes and something is still wrong, read the logs. They almost always name the problem:
 
 ```bash
 journalctl --user -u cloudflare-tmux -n 50 --no-pager
