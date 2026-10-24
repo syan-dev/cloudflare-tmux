@@ -46,14 +46,14 @@ Only when you **change something on Cloudflare**. Everything else runs on your s
 **Needs a token**
 
 - the first install, and any re-run of `./install.sh`
-- adding a person with `./install.sh add`
+- adding a person with `cloudflare-tmux add`
 - changing the hostname, `PORT`, `TUNNEL_NAME` or `ACCESS_SESSION`
 - replacing a leaked tunnel token
 - tidying the Access policy after removing a person
 
 **Never needs a token**
 
-- locking someone out: `./install.sh remove their@email`
+- locking someone out: `cloudflare-tmux remove their@email`
 - mapping an already-listed email to a different Linux user
 - the two-step code: turning it on, enrolling or removing a phone
 - updating the app or `cloudflared`

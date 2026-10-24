@@ -2,10 +2,13 @@
 
 ## Unreleased
 
-- **`./install.sh doctor`** checks the config, every mapped person, both services, boot settings, the local and
+- **The `cloudflare-tmux` command**, linked into `~/.local/bin` by the installer: `status` (is it online?),
+  `people`, `add`, `remove`, `config`, `logs`, `restart` and `doctor`. One command to learn, whichever install
+  you have.
+- **`cloudflare-tmux doctor`** checks the config, every mapped person, both services, boot settings, the local and
   public URLs and, with `CF_API_TOKEN`, the Access policy. It prints the fix next to anything that fails, and
   warns when a mapped Linux user is in a root-equivalent group such as `sudo` or `docker`.
-- **One command to add or remove a person**: `./install.sh add carol@example.com carol` updates
+- **One command to add or remove a person**: `cloudflare-tmux add carol@example.com carol` updates
   `IDENTITIES`, the Access policy and the running app. It offers to switch to the multi-user install when the
   Linux user isn't your own. `remove` locks someone out without a token. `list` shows who may log in.
 - **Docs: a single [Add a person](docs/content/add-a-person.md) page** with the exact dashboard steps, the token

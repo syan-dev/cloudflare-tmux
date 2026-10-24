@@ -2,10 +2,7 @@
 # The one command for cloudflare-tmux. Safe to re-run.
 #
 # Usage: ./install.sh [--host term.example.com] [--identities you@gmail.com:you,...] [--multi-user] [--yes]
-#        ./install.sh add <cloudflare-email> [linux-user]    let someone log in
-#        ./install.sh remove <cloudflare-email>              lock someone out
-#        ./install.sh list                                   who may log in
-#        ./install.sh doctor                                 check the install and say what to fix
+#        ./install.sh add|remove|list|doctor ...             same as the cloudflare-tmux command (see bin/)
 #
 # Setup checks prerequisites, asks for what it needs, provisions Cloudflare (scripts/cloudflare.sh) and
 # installs the services (scripts/setup.sh, or scripts/install-system.sh when people map to other Linux users).
@@ -17,7 +14,7 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
 dl="" token="" use_multi=""
 
-usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 case "${1:-}" in add|remove|list) exec "$APP_DIR/scripts/people.sh" "$@" ;; doctor) exec "$APP_DIR/scripts/doctor.sh" ;; esac
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -153,10 +150,19 @@ else
   "$APP_DIR/scripts/setup.sh"
 fi
 
+# The cloudflare-tmux command
+mkdir -p "$HOME/.local/bin"
+ln -sfn "$APP_DIR/bin/cloudflare-tmux" "$HOME/.local/bin/cloudflare-tmux"
+
 echo
 bold "Done. Open https://$HOST"
 echo "  Then delete the API token at https://dash.cloudflare.com/profile/api-tokens; nothing running uses it."
-echo "  Add people later with one command: ./install.sh add their@email.com [linux-user]"
+echo
+echo "  Day to day, use the cloudflare-tmux command:"
+echo "    cloudflare-tmux status                 is it online?"
+echo "    cloudflare-tmux add their@email.com    let someone log in"
+echo "    cloudflare-tmux doctor                 check everything and print fixes"
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) echo "  (~/.local/bin is not on your PATH yet; log out and in, or run: export PATH=\"\$HOME/.local/bin:\$PATH\")" ;; esac
 if [ "$MULTI_USER" -eq 1 ]; then
   echo "  Status: systemctl status cloudflare-tmux; systemctl --user status cloudflare-tmux-cloudflared"
   echo "  Logs:   journalctl -u cloudflare-tmux -f"

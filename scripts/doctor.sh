@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Checks a cloudflare-tmux install and prints one line per check with the fix when something is wrong.
-# Usage: ./install.sh doctor            (runs this script)
-#        CF_API_TOKEN=... ./install.sh doctor   also compares the Cloudflare Access policy with IDENTITIES
+# Usage: cloudflare-tmux doctor
+#        CF_API_TOKEN=... cloudflare-tmux doctor   also compares the Cloudflare Access policy with IDENTITIES
 # Needs no root. Exit code 1 if any check failed.
 set -uo pipefail
 
@@ -41,7 +41,7 @@ IFS=',' read -ra entries <<< "$IDENTITIES"
 for e in "${entries[@]}"; do
   [ -n "$e" ] || continue
   email="${e%:*}"; u="${e##*:}"
-  if [[ "$e" != *@*:?* ]]; then bad "'$e' is not email:linuxuser"; fix "./install.sh add <email> <linux-user>"; continue; fi
+  if [[ "$e" != *@*:?* ]]; then bad "'$e' is not email:linuxuser"; fix "cloudflare-tmux add <email> <linux-user>"; continue; fi
   if [ "$u" = root ]; then bad "$email maps to root, which is refused"; continue; fi
   pw="$(getent passwd "$u" || true)"
   if [ -z "$pw" ]; then bad "$email -> $u: Linux user does not exist"; fix "sudo adduser $u"; continue; fi

@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# The cloudflare-tmux command. ./install.sh links it into ~/.local/bin.
+#
+# Usage:
+#   cloudflare-tmux status                 is it online? services, tunnel, public URL, people
+#   cloudflare-tmux people                 who may log in: Cloudflare email -> Linux user
+#   cloudflare-tmux add <email> [user]     let someone log in (asks for an API token)
+#   cloudflare-tmux remove <email>         lock someone out (no token)
+#   cloudflare-tmux config                 show the configuration
+#   cloudflare-tmux logs [-f]              app log (-f to follow)
+#   cloudflare-tmux restart                restart the app the right way for this install
+#   cloudflare-tmux doctor                 check everything and print the fix for anything wrong
+#   cloudflare-tmux help
+set -euo pipefail
+
+SELF="$(readlink -f "$0")"
+APP_DIR="$(cd "$(dirname "$SELF")/.." && pwd)"
+# shellcheck source=scripts/config.sh
+. "$APP_DIR/scripts/config.sh"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNTIME_DIR/bus}"
+
+if [ -f /etc/systemd/system/cloudflare-tmux.service ]; then MODE=multi; else MODE=single; fi
+green() { printf '\033[32m●\033[0m %s' "$*"; }
+red()   { printf '\033[31m●\033[0m %s' "$*"; }
+bold()  { printf '\033[1m%s\033[0m' "$*"; }
+usage() { sed -n '2,13p' "$SELF" | sed 's/^# \{0,1\}//'; }
+
+# app_ctl ARGS...: systemctl for the app service, system or user depending on the install
+app_ctl() { if [ "$MODE" = multi ]; then systemctl "$@" cloudflare-tmux.service; else systemctl --user "$@" cloudflare-tmux.service; fi; }
+app_journal() { if [ "$MODE" = multi ]; then journalctl -u cloudflare-tmux "$@"; else journalctl --user -u cloudflare-tmux "$@"; fi; }
+# since SCOPE UNIT: SCOPE is "" (system) or --user. Prints "since <date> <time>".
+since() { local t; t="$(systemctl ${1:+"$1"} show -p ActiveEnterTimestamp --value "$2" 2>/dev/null || true)"; [ -n "$t" ] && echo "since $(echo "$t" | cut -d' ' -f2-3)"; }
+
+cmd_people() {
+  local ids; ids="$(env_get IDENTITIES)"
+  [ -n "$ids" ] || { echo "Nobody yet. Run: cloudflare-tmux add you@example.com"; return 1; }
+  printf '%-40s %s\n' "CLOUDFLARE ACCOUNT" "LINUX USER"
+  echo "$ids" | tr ',' '\n' | sed '/^ *$/d' | awk -F: '{ u=$NF; sub(/:[^:]*$/, ""); printf "%-40s %s\n", $0, u }'
+}
+
+cmd_status() {
+  local host port code n
+  host="$(env_get PUBLIC_HOST)"; port="$(env_get PORT)"; port="${port:-7681}"
+  [ -f "$ENV_FILE" ] || { echo "Not installed: no config at $ENV_FILE. Run ./install.sh"; return 1; }
+  bold "cloudflare-tmux"; printf '  https://%s   (%s-user install)\n' "${host:-?}" "$MODE"
+  printf '  %-8s ' app
+  if app_ctl is-active -q; then
+    if [ "$MODE" = multi ]; then green "running $(since "" cloudflare-tmux.service)"; else green "running $(since --user cloudflare-tmux.service)"; fi
+  else red "not running        cloudflare-tmux logs"; fi; echo
+  printf '  %-8s ' tunnel
+  if systemctl --user is-active -q cloudflare-tmux-cloudflared.service; then
+    inv="$(systemctl --user show -p InvocationID --value cloudflare-tmux-cloudflared.service 2>/dev/null || true)"
+    n="$(journalctl --user --no-pager ${inv:+_SYSTEMD_INVOCATION_ID=$inv} -u cloudflare-tmux-cloudflared 2>/dev/null | grep -c 'Registered tunnel connection' || true)"
+    green "running $(since --user cloudflare-tmux-cloudflared.service)${n:+, $n connection(s) to Cloudflare}"
+  else red "not running        journalctl --user -u cloudflare-tmux-cloudflared -n 30"; fi; echo
+  printf '  %-8s ' public
+  if [ -n "$host" ]; then
+    code="$(curl -sI -m 8 "https://$host/" 2>/dev/null | awk 'NR==1{print $2}')"
+    case "$code" in
+      302) green "https://$host shows the Cloudflare login page" ;;
+      "") red "https://$host does not answer" ;;
+      530) red "https://$host: tunnel not connected (Cloudflare 1033)" ;;
+      *) red "https://$host answers HTTP $code" ;;
+    esac
+  else red "no hostname in config"; fi; echo
+  printf '  %-8s ' local
+  code="$(curl -s -o /dev/null -m 3 -w '%{http_code}' "http://127.0.0.1:$port/" || true)"
+  if [ "$code" = 401 ]; then green "port $port answers and asks for a login"; else red "port $port: HTTP ${code:-none}"; fi; echo
+  printf '  %-8s ' people
+  n="$(env_get IDENTITIES | tr ',' '\n' | sed '/^ *$/d' | wc -l)"
+  printf '%s   (cloudflare-tmux people)\n' "$n"
+  printf '  %-8s %s\n' config "$ENV_FILE"
+  echo; echo "More detail: cloudflare-tmux doctor"
+}
+
+cmd_config() {
+  [ -f "$ENV_FILE" ] || { echo "No config at $ENV_FILE. Run ./install.sh"; return 1; }
+  bold "Config file"; echo "  $ENV_FILE"
+  [ "$MODE" = multi ] && echo "  running copy: /etc/cloudflare-tmux/env (root only; refreshed by install-system.sh)"
+  echo
+  grep -E '^[A-Z_]+=' "$ENV_FILE" | sed 's/^/  /'
+  echo
+  bold "Install"; echo "  $MODE-user: $(if [ "$MODE" = multi ]; then echo "the app runs as root and serves every mapped Linux user"; else echo "the app runs as $USER and serves only $USER"; fi)"
+  echo "  app code: $(if [ "$MODE" = multi ]; then echo /opt/cloudflare-tmux; else echo "$APP_DIR"; fi)"
+  echo "  tunnel token: $HOME/.cloudflared/cloudflare-tmux.token"
+  echo
+  echo "Edit the file, then: cloudflare-tmux restart   (people: use add/remove instead)"
+}
+
+cmd_restart() {
+  if [ "$MODE" = multi ]; then
+    echo "Re-installing the root service (sudo may ask for your password)..."
+    sudo NODE_BIN="$(command -v node)" ENV_FILE="$ENV_FILE" "$APP_DIR/scripts/install-system.sh"
+  else
+    systemctl --user restart cloudflare-tmux.service
+  fi
+  cmd_status
+}
+
+case "${1:-help}" in
+  status|st) cmd_status ;;
+  people|list|ls) cmd_people ;;
+  add|remove) exec "$APP_DIR/scripts/people.sh" "$@" ;;
+  config|cfg) cmd_config ;;
+  logs|log) shift; app_journal --no-pager -n 50 "$@" 2>/dev/null || { echo "Can't read the log as $USER. Try: sudo journalctl -u cloudflare-tmux -n 50"; exit 1; } ;;
+  restart) cmd_restart ;;
+  doctor) exec "$APP_DIR/scripts/doctor.sh" ;;
+  install|setup) shift; exec "$APP_DIR/install.sh" "$@" ;;
+  help|-h|--help) usage ;;
+  *) echo "Unknown command: $1"; echo; usage; exit 1 ;;
+esac

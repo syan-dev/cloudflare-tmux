@@ -58,13 +58,16 @@ Open `https://term.example.com` and sign in with your Cloudflare account.
 
 Afterwards, [delete the API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#delete-it-afterwards)
 and go through the [security checklist](https://syan-dev.github.io/cloudflare-tmux/security.html#hardening-checklist).
-To let more people in, invite them as members of your Cloudflare account and run one command:
+Day to day, one command does everything:
 
 ```bash
-./install.sh add carol@example.com carol
+cloudflare-tmux status                       # is it online?
+cloudflare-tmux add carol@example.com carol  # let someone log in (invite them as a member first)
+cloudflare-tmux doctor                       # check everything and print the fix for anything wrong
 ```
 
-See [Add a person](https://syan-dev.github.io/cloudflare-tmux/add-a-person.html).
+See [Add a person](https://syan-dev.github.io/cloudflare-tmux/add-a-person.html) and
+[Operations](https://syan-dev.github.io/cloudflare-tmux/operations.html).
 
 Without prompts, for scripts:
 
@@ -91,7 +94,7 @@ Full docs: **https://syan-dev.github.io/cloudflare-tmux/**
 | [Security model](https://syan-dev.github.io/cloudflare-tmux/security.html) | layers and hardening |
 | [Two-step code](https://syan-dev.github.io/cloudflare-tmux/two-step.html) | optional authenticator code |
 | [Operations](https://syan-dev.github.io/cloudflare-tmux/operations.html) | logs, updates, uninstall |
-| [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | `./install.sh doctor`, errors and fixes |
+| [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | `cloudflare-tmux doctor`, errors and fixes |
 
 ## Development
 

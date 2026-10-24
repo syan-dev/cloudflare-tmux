@@ -57,7 +57,7 @@ never saved.
 On your server, in the `cloudflare-tmux` directory:
 
 ```bash
-./install.sh add carol@example.com carol
+cloudflare-tmux add carol@example.com carol
 ```
 
 - The first argument is their Cloudflare account email.
@@ -92,10 +92,10 @@ Authentication**. Their Cloudflare account is now a key to a shell on your serve
 | They see | Cause | Fix |
 |---|---|---|
 | "Cloudflare sign-in is restricted to members of the account" | They haven't accepted the invitation, or signed in with a different Cloudflare account. | Check **Manage Account → Members** shows them as Accepted. |
-| Cloudflare's "Access denied" page | Their email isn't in the Cloudflare policy. | Run `./install.sh add` again with a token. |
-| "Not signed in" page from the app | The app's list doesn't have them, or the mapping is wrong. The page says what to ask you for. | Run `./install.sh list` to check, then `./install.sh add`. |
+| Cloudflare's "Access denied" page | Their email isn't in the Cloudflare policy. | Run `cloudflare-tmux add` again with a token. |
+| "Not signed in" page from the app | The app's list doesn't have them, or the mapping is wrong. The page says what to ask you for. | Run `cloudflare-tmux people` to check, then `cloudflare-tmux add`. |
 
-When in doubt, run `./install.sh doctor` on the server. It checks every mapped person, both services and the
+When in doubt, run `cloudflare-tmux doctor` on the server. It checks every mapped person, both services and the
 public URL, and prints the fix next to anything wrong. More in [Troubleshooting](troubleshooting.md).
 
 ## Do I need a token every time?
@@ -107,7 +107,7 @@ There are two lists of allowed people, and both must have the person:
 1. **Cloudflare's list**, in the Access policy. Cloudflare checks it before the request reaches your server. Only
    the API can change it, so changing it needs a token. The token is never saved, so each change needs a new one.
 2. **The server's list**, `IDENTITIES` in the config file. The app checks it and maps the email to a Linux user.
-   Changing it needs no token, only a restart, which `./install.sh add` and `remove` do for you.
+   Changing it needs no token, only a restart, which `cloudflare-tmux add` and `remove` do for you.
 
 | Task | Token? |
 |---|---|
@@ -121,8 +121,8 @@ There are two lists of allowed people, and both must have the person:
 
 ```bash
 read -rs CF_API_TOKEN && export CF_API_TOKEN   # paste the token, nothing is shown
-./install.sh add alice@example.com alice
-./install.sh add bob@example.com bob
+cloudflare-tmux add alice@example.com alice
+cloudflare-tmux add bob@example.com bob
 unset CF_API_TOKEN
 ```
 
@@ -135,7 +135,7 @@ adding their own email. A token that lives for an hour and is then deleted can't
 ## Remove a person
 
 ```bash
-./install.sh remove carol@example.com
+cloudflare-tmux remove carol@example.com
 ```
 
 No token needed. The app refuses them from then on, even with a valid Cloudflare login. Later, with a fresh
@@ -145,5 +145,5 @@ sessions keep running. See [If something goes wrong](security.md#if-something-go
 ## See who may log in
 
 ```bash
-./install.sh list
+cloudflare-tmux people
 ```

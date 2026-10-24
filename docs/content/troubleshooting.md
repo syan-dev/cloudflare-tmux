@@ -9,8 +9,8 @@ Start with one command. It checks the config, every mapped person, both services
 and public URLs, and prints the fix next to anything that fails:
 
 ```bash
-./install.sh doctor
-CF_API_TOKEN=... ./install.sh doctor     # also compares the Cloudflare Access policy with your list
+cloudflare-tmux doctor
+CF_API_TOKEN=... cloudflare-tmux doctor     # also compares the Cloudflare Access policy with your list
 ```
 
 If that passes and something is still wrong, read the logs. They almost always name the problem:
@@ -30,7 +30,7 @@ The app rejected the login. The page tells the person what to ask you for. The l
 | Reason in log | Fix |
 |---|---|
 | `missing Access token` | The request didn't come through Access. Check that the Access application covers exactly this hostname. |
-| `email not mapped: x@y` | `./install.sh add x@y user`. See [Add a person](add-a-person.md). |
+| `email not mapped: x@y` | `cloudflare-tmux add x@y user`. See [Add a person](add-a-person.md). |
 | `unexpected "aud" claim value` | `CF_ACCESS_AUD` in the config file doesn't match the Access application. Re-run `scripts/cloudflare.sh <host>` and restart. |
 | `unexpected "iss" claim value` | `CF_TEAM_DOMAIN` is wrong. Did you rename your team? Re-run `cloudflare.sh`. |
 | `Linux user u does not exist` | Create the user, or fix the mapping. |
@@ -92,7 +92,7 @@ Cloudflare rejected the API token. The script now checks the token first and nam
 ## App won't start: "IDENTITIES maps x to Linux user 'u', but this server runs as 'me'"
 
 The single-user install runs the app as you and can only start tmux as you. Either map everyone to your own
-user, or switch to the [multi-user install](install/multi-user.md). `./install.sh add` offers the switch
+user, or switch to the [multi-user install](install/multi-user.md). `cloudflare-tmux add` offers the switch
 when it's needed.
 
 ## App won't start: "Set CF_TEAM_DOMAIN, CF_ACCESS_AUD and IDENTITIES"

@@ -20,9 +20,9 @@ Access always sees their Cloudflare account email.
 See [Add a person](../add-a-person.md). In short:
 
 ```bash
-./install.sh add carol@example.com carol     # asks for a short-lived API token
-./install.sh remove carol@example.com        # no token needed
-./install.sh list
+cloudflare-tmux add carol@example.com carol     # asks for a short-lived API token
+cloudflare-tmux remove carol@example.com        # no token needed
+cloudflare-tmux people
 ```
 
 ## Protect the accounts

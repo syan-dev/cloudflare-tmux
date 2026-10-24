@@ -8,6 +8,24 @@ description: Status, logs, restarts, updates, and a complete uninstall.
 The commands below are for the single-user install. The [multi-user](#multi-user-install) section at the end
 lists what differs.
 
+## The cloudflare-tmux command
+
+The installer links `bin/cloudflare-tmux` into `~/.local/bin`. It is the one command for day-to-day work:
+
+```bash
+cloudflare-tmux status                 # is it online? app, tunnel, public URL, how many people
+cloudflare-tmux people                 # who may log in: Cloudflare email -> Linux user
+cloudflare-tmux add carol@example.com carol
+cloudflare-tmux remove carol@example.com
+cloudflare-tmux config                 # the configuration and where things live
+cloudflare-tmux logs -f                # the app log, whichever install you have
+cloudflare-tmux restart                # restart the app the right way for this install
+cloudflare-tmux doctor                 # check everything and print the fix for anything wrong
+```
+
+If the command isn't found, `~/.local/bin` isn't on your `PATH` yet. Log out and in, or run
+`export PATH="$HOME/.local/bin:$PATH"`. From the checkout, `./install.sh add|remove|list|doctor` does the same.
+
 ## Status and logs
 
 ```bash
@@ -64,7 +82,7 @@ If your `cloudflared` comes from a package manager, update it there instead and 
 ## Check the install
 
 ```bash
-./install.sh doctor
+cloudflare-tmux doctor
 ```
 
 One line per check, with the fix next to anything that fails. Run it after a reboot, after changing the config,
@@ -73,9 +91,9 @@ or when someone can't get in.
 ## Add or remove a person
 
 ```bash
-./install.sh add carol@example.com carol     # asks for a short-lived API token
-./install.sh remove carol@example.com        # no token needed
-./install.sh list
+cloudflare-tmux add carol@example.com carol     # asks for a short-lived API token
+cloudflare-tmux remove carol@example.com        # no token needed
+cloudflare-tmux people
 ```
 
 See [Cloudflare login](cloudflare/cloudflare-login.md) for inviting them as a member first.

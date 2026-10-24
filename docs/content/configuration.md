@@ -46,9 +46,9 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 
 | Script | What it does |
 |---|---|
-| `./install.sh` | The whole setup. Safe to re-run. |
-| `./install.sh add\|remove\|list` | Add or remove a person, or list who may log in. Implemented in `scripts/people.sh`. |
-| `./install.sh doctor` | Checks the whole install and prints the fix for anything wrong. Implemented in `scripts/doctor.sh`. |
+| `./install.sh` | The whole setup. Safe to re-run. Links the `cloudflare-tmux` command into `~/.local/bin`. |
+| `cloudflare-tmux` | Day-to-day: `status`, `people`, `add`, `remove`, `config`, `logs`, `restart`, `doctor`. See [Operations](operations.md#the-cloudflare-tmux-command). `./install.sh add\|remove\|list\|doctor` are the same. |
+| `scripts/people.sh`, `scripts/doctor.sh` | What `add`/`remove`/`people` and `doctor` run. |
 | `scripts/cloudflare.sh <host>` | Creates or updates everything on Cloudflare from the config. Needs an API token. |
 | `scripts/setup.sh` | Installs or restarts the user services. Single-user install. |
 | `scripts/install-system.sh` | Installs or restarts the root app service. Multi-user install. Run with `sudo`. |

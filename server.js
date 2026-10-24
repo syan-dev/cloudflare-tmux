@@ -130,7 +130,7 @@ async function authenticate(req) {
   const user = IDENTITIES.get(email);
   if (!user) throw mappingError(`email not mapped: ${email}`,
     `You signed in to Cloudflare as ${email}, but that account isn't on this server's list of people who may log in.`,
-    `Ask the admin to run: ./install.sh add ${email} <linux-user>`);
+    `Ask the admin to run: cloudflare-tmux add ${email} <linux-user>`);
   const account = await lookupUser(user);
   if (!account) throw mappingError(`${email}: Linux user ${user} does not exist`,
     `${email} is mapped to the Linux user ${user}, which doesn't exist on this server.`, 'Ask the admin to create it or fix the mapping.');
