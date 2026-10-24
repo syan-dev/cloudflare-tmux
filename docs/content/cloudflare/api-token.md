@@ -37,6 +37,10 @@ Keep the token small:
 
 ## When you need it
 
+Short version: adding a person needs one, almost nothing else does. See
+[Do I need a token every time?](../add-a-person.md#do-i-need-a-token-every-time) for the table.
+
+
 Only when you **change something on Cloudflare**. Everything else runs on your server without a token.
 
 **Needs a token**

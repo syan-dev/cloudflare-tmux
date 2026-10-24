@@ -98,6 +98,40 @@ Authentication**. Their Cloudflare account is now a key to a shell on your serve
 When in doubt, run `./install.sh doctor` on the server. It checks every mapped person, both services and the
 public URL, and prints the fix next to anything wrong. More in [Troubleshooting](troubleshooting.md).
 
+## Do I need a token every time?
+
+To add someone, yes. To do almost anything else, no.
+
+There are two lists of allowed people, and both must have the person:
+
+1. **Cloudflare's list**, in the Access policy. Cloudflare checks it before the request reaches your server. Only
+   the API can change it, so changing it needs a token. The token is never saved, so each change needs a new one.
+2. **The server's list**, `IDENTITIES` in the config file. The app checks it and maps the email to a Linux user.
+   Changing it needs no token, only a restart, which `./install.sh add` and `remove` do for you.
+
+| Task | Token? |
+|---|---|
+| Add a person | **Yes.** Their email must go into Cloudflare's list. |
+| Remove a person | No. The server refuses them at once. Cloudflare's list is tidied the next time you run with a token. |
+| Move an existing person to a different Linux user | No. Only the server's list changes. |
+| See who may log in, or run `doctor` | No. With a token, `doctor` also compares the two lists. |
+| Restart, update, reboot | No. |
+
+**Adding several people.** Create one token, export it, add everyone, then delete the token:
+
+```bash
+read -rs CF_API_TOKEN && export CF_API_TOKEN   # paste the token, nothing is shown
+./install.sh add alice@example.com alice
+./install.sh add bob@example.com bob
+unset CF_API_TOKEN
+```
+
+With `CF_API_TOKEN` set, the command doesn't ask for the token.
+
+**Why not keep a token on the server?** Anyone who gets that token could open your terminal to themselves by
+adding their own email. A token that lives for an hour and is then deleted can't be stolen later. The
+[API token](cloudflare/api-token.md) page explains the permissions and the trade-off in full.
+
 ## Remove a person
 
 ```bash
