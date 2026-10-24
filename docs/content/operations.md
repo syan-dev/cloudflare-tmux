@@ -14,7 +14,7 @@ The installer links `bin/cloudflare-tmux` into `~/.local/bin`. It is the one com
 
 ```bash
 cloudflare-tmux status                 # is it online? app, tunnel, public URL, how many people
-cloudflare-tmux people                 # who may log in: Cloudflare email -> Linux user
+cloudflare-tmux people                 # each person: Linux user, live in the app or not, last login
 cloudflare-tmux add carol@example.com carol
 cloudflare-tmux remove carol@example.com
 cloudflare-tmux config                 # the configuration and where things live

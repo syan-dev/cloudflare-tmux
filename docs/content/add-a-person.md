@@ -76,6 +76,25 @@ settings are kept. See [Multi-user install](install/multi-user.md) for what chan
 Go back to [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) and delete
 it. Nothing that runs uses it.
 
+## How to know it worked
+
+```bash
+cloudflare-tmux people
+```
+
+One line per person, with four things you can read off:
+
+| Column | Meaning |
+|---|---|
+| **LINUX USER** | The account their shell runs as. |
+| **APP** | `live`: the running app accepts them. `restart needed`: they are in the config but the app hasn't been restarted. Run `cloudflare-tmux restart`. |
+| **LAST LOGIN** | When they last opened a session, from the app log. `never` means they haven't got in yet. |
+| *tried ..., refused by the app* | They reached your server after the last login but the app refused them, usually because the restart hadn't happened yet. |
+
+Two things the server can't see: whether they accepted your invite, and whether Cloudflare's policy has them.
+The `add` command confirms the policy when it runs. For the invite, check **Manage Account → Members** shows
+them as Accepted. Once they log in, `LAST LOGIN` fills in and you know the whole chain works.
+
 ## 5. Send them the link
 
 Send them `https://term.example.com` and the [Usage](usage.md) page. Here is what they see:

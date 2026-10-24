@@ -47,18 +47,6 @@ app_journal() { if [ "$MODE" = multi ]; then journalctl -u cloudflare-tmux "$@";
 # since SCOPE UNIT: SCOPE is "" (system) or --user. Prints "since <date> <time>".
 since() { local t; t="$(systemctl ${1:+"$1"} show -p ActiveEnterTimestamp --value "$2" 2>/dev/null || true)"; [ -n "$t" ] && echo "since $(echo "$t" | cut -d' ' -f2-3)"; }
 
-cmd_people() {
-  local ids n; ids="$(env_get IDENTITIES)"
-  [ -n "$ids" ] || { echo "Nobody yet. Run: $(cyan 'cloudflare-tmux add you@example.com')"; return 1; }
-  echo
-  printf '  %s%-40s %s%s\n' "$C_DIM$C_UL" "CLOUDFLARE ACCOUNT" "LINUX USER" "$C_RESET"
-  echo "$ids" | tr ',' '\n' | sed '/^ *$/d' | awk -F: -v b="$C_BOLD" -v r="$C_RESET" -v d="$C_DIM" \
-    '{ u=$NF; sub(/:[^:]*$/, ""); printf "  %-40s %s→%s %s%s%s\n", $0, d, r, b, u, r }'
-  echo
-  n="$(echo "$ids" | tr ',' '\n' | sed '/^ *$/d' | wc -l)"
-  note "$n may log in.  Add one: cloudflare-tmux add <email> [linux-user]"
-}
-
 cmd_status() {
   local host port code n inv
   host="$(env_get PUBLIC_HOST)"; port="$(env_get PORT)"; port="${port:-7681}"
@@ -125,7 +113,7 @@ cmd_restart() {
 
 case "${1:-help}" in
   status|st) cmd_status ;;
-  people|list|ls) cmd_people ;;
+  people|list|ls) exec "$APP_DIR/scripts/people.sh" list ;;
   add|remove) exec "$APP_DIR/scripts/people.sh" "$@" ;;
   config|cfg) cmd_config ;;
   logs|log) shift; app_journal --no-pager -n 50 "$@" 2>/dev/null || { bad "can't read the log as $USER"; fix "sudo journalctl -u cloudflare-tmux -n 50"; exit 1; } ;;

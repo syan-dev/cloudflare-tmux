@@ -28,6 +28,20 @@ die() { printf '  %s✗%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
 mode() { if [ -f /etc/systemd/system/cloudflare-tmux.service ]; then echo multi; else echo single; fi; }
 
 identities() { env_get IDENTITIES | tr ',' '\n' | sed '/^[[:space:]]*$/d'; }
+app_journal() { if [ "$(mode)" = multi ]; then journalctl -u cloudflare-tmux "$@"; else journalctl --user -u cloudflare-tmux "$@"; fi; }
+# Emails the running app has loaded (from its last startup line), lower-case, one per line. Empty if unreadable.
+running_emails() {
+  app_journal --no-pager -o cat 2>/dev/null | grep -o 'identities: .*' | tail -1 | sed 's/identities: //' \
+    | tr ',' '\n' | sed 's/^ *//; s/→.*//' | tr '[:upper:]' '[:lower:]'
+}
+# For each email: "email<TAB>last-login<TAB>last-rejection" from the app log (ISO timestamps, "-" if none).
+login_history() {
+  app_journal --no-pager -o short-iso 2>/dev/null | awk '
+    / attach [^ ]+ by [^ ]+@/ { for (i=1;i<=NF;i++) if ($i=="by") { e=tolower($(i+1)); login[e]=substr($1,1,16) } }
+    /email not mapped: / { e=tolower($NF); rej[e]=substr($1,1,16) }
+    END { for (e in login) seen[e]=1; for (e in rej) seen[e]=1
+          for (e in seen) printf "%s\t%s\t%s\n", e, (e in login ? login[e] : "-"), (e in rej ? rej[e] : "-") }'
+}
 without() { identities | awk -v e="$1" 'BEGIN{IGNORECASE=1} { n=$0; sub(/:[^:]*$/, "", n); if (tolower(n) != e) print }' | paste -sd, -; }
 
 restart_app() {
@@ -42,8 +56,28 @@ restart_app() {
 
 case "$CMD" in
 list)
-  note "Install: $(mode)-user   Config: $ENV_FILE"
-  identities | awk -F: -v b="$C_BOLD" -v r="$C_RESET" -v d="$C_DIM" '{ u=$NF; sub(/:[^:]*$/, ""); printf "  %-40s %s→%s %s%s%s\n", $0, d, r, b, u, r }'
+  RUNNING="$(running_emails)"; HIST="$(login_history)"
+  echo
+  printf '  %s%-34s %-12s %-17s %s%s\n' "$C_DIM$C_UL" "CLOUDFLARE ACCOUNT" "LINUX USER" "APP" "LAST LOGIN" "$C_RESET"
+  while IFS= read -r e; do
+    [ -n "$e" ] || continue
+    email="$(echo "${e%:*}" | sed 's/^ *//' | tr '[:upper:]' '[:lower:]')"; u="${e##*:}"
+    # dot color and plain text kept apart so the column stays aligned with and without colors
+    if [ -z "$RUNNING" ]; then dot="$C_YELLOW" app="log unreadable"
+    elif echo "$RUNNING" | grep -qxF "$email"; then dot="$C_GREEN" app="live"
+    else dot="$C_RED" app="restart needed"; fi
+    login="$(echo "$HIST" | awk -F'\t' -v e="$email" '$1==e {print $2}')"; rej="$(echo "$HIST" | awk -F'\t' -v e="$email" '$1==e {print $3}')"
+    if [ -n "$login" ] && [ "$login" != - ]; then last="$(tr T ' ' <<< "$login")"
+    else last="$(dim never)"; fi
+    if [ -n "$rej" ] && [ "$rej" != - ] && { [ -z "$login" ] || [ "$login" = - ] || [[ "$rej" > "$login" ]]; }; then
+      last="$last  $(yellow "tried $(tr T ' ' <<< "$rej"), refused by the app")"
+    fi
+    printf '  %-34s %s%-12s%s %s●%s %-15s %s\n' "$email" "$C_BOLD" "$u" "$C_RESET" "$dot" "$C_RESET" "$app" "$last"
+  done < <(identities)
+  echo
+  note "APP live = the running app accepts them. restart needed = in the config, not applied yet: cloudflare-tmux restart"
+  note "LAST LOGIN comes from the app log. 'never' with an accepted invite usually means they haven't tried yet."
+  note "Install: $(mode)-user"
   ;;
 
 add)
@@ -107,7 +141,14 @@ add)
   fi
 
   echo
-  ok "$(cyan "$EMAIL") can now log in at $(link "https://$HOST") as Linux user $(bold "$LINUX_USER")."
+  title "Result for $(cyan "$EMAIL")"
+  ok "config      saved: $EMAIL → $LINUX_USER"
+  ok "cloudflare  Access policy allows $EMAIL"
+  if running_emails | grep -qxF "$EMAIL"; then ok "app         running with the new list"
+  elif [ -z "$(running_emails)" ]; then warn "app         can't read the app log to confirm; run: cloudflare-tmux doctor"
+  else bad "app         still running the old list"; fix "cloudflare-tmux restart"; fi
+  warn "member      can't be checked from here. They must accept your invite (see below)."
+  note "When they log in, it shows under: cloudflare-tmux people"
   echo
   echo "  $(bold 'Still to do:')"
   step 1 "If $EMAIL isn't a member of your Cloudflare account yet, invite it:"
