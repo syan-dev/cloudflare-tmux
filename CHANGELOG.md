@@ -4,7 +4,7 @@
 
 - **The `cloudflare-tmux` command**, linked into `~/.local/bin` by the installer: `status` (is it online?),
   `people`, `add`, `remove`, `config`, `logs`, `restart` and `doctor`. One command to learn, whichever install
-  you have.
+  you have. Output is colored on a terminal and plain when piped or with `NO_COLOR`.
 - **`cloudflare-tmux doctor`** checks the config, every mapped person, both services, boot settings, the local and
   public URLs and, with `CF_API_TOKEN`, the Access policy. It prints the fix next to anything that fails, and
   warns when a mapped Linux user is in a root-equivalent group such as `sudo` or `docker`.

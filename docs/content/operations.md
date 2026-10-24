@@ -23,6 +23,8 @@ cloudflare-tmux restart                # restart the app the right way for this 
 cloudflare-tmux doctor                 # check everything and print the fix for anything wrong
 ```
 
+Output is colored when it goes to a terminal. Set `NO_COLOR=1` or pipe it to turn colors off.
+
 If the command isn't found, `~/.local/bin` isn't on your `PATH` yet. Log out and in, or run
 `export PATH="$HOME/.local/bin:$PATH"`. From the checkout, `./install.sh add|remove|list|doctor` does the same.
 

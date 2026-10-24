@@ -15,12 +15,13 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/config.sh
 . "$APP_DIR/scripts/config.sh"
+# shellcheck source=scripts/ui.sh
+. "$APP_DIR/scripts/ui.sh"
 
 YES=0; ARGS=()
 for a in "$@"; do case "$a" in -y|--yes) YES=1 ;; -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; *) ARGS+=("$a") ;; esac; done
 CMD="${ARGS[0]:-}"
-die() { echo "$*" >&2; exit 1; }
-ok() { printf '  \033[32m✓\033[0m %s\n' "$*"; }
+die() { printf '  %s✗%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; exit 1; }
 
 # single: the app is your systemd user service and serves only your Linux user.
 # multi:  the app is a root system service (scripts/install-system.sh) and serves any Linux user.
@@ -31,7 +32,7 @@ without() { identities | awk -v e="$1" 'BEGIN{IGNORECASE=1} { n=$0; sub(/:[^:]*$
 
 restart_app() {
   if [ "$(mode)" = multi ]; then
-    echo "Installing the root service (sudo may ask for your password)..."
+    note "Installing the root service (sudo may ask for your password)..."
     sudo NODE_BIN="$(command -v node)" ENV_FILE="$ENV_FILE" "$APP_DIR/scripts/install-system.sh"
   else
     systemctl --user restart cloudflare-tmux.service
@@ -41,8 +42,8 @@ restart_app() {
 
 case "$CMD" in
 list)
-  echo "Install: $(mode)-user   Config: $ENV_FILE"
-  identities | awk -F: '{ u=$NF; sub(/:[^:]*$/, ""); printf "  %-40s -> %s\n", $0, u }'
+  note "Install: $(mode)-user   Config: $ENV_FILE"
+  identities | awk -F: -v b="$C_BOLD" -v r="$C_RESET" -v d="$C_DIM" '{ u=$NF; sub(/:[^:]*$/, ""); printf "  %-40s %s→%s %s%s%s\n", $0, d, r, b, u, r }'
   ;;
 
 add)
@@ -60,26 +61,29 @@ add)
 
   SWITCH=0
   if [ "$(mode)" = single ] && [ "$LINUX_USER" != "$USER" ]; then
-    echo "The app runs as your user service, so it can only serve Linux user '$USER'."
-    echo "Serving '$LINUX_USER' needs the multi-user install: the app becomes a root system service"
-    echo "that starts tmux as each mapped user. See docs/content/install/multi-user.md."
+    warn "The app runs as your user service, so it can only serve Linux user '$USER'."
+    note "Serving '$LINUX_USER' needs the multi-user install: the app becomes a root system service"
+    note "that starts tmux as each mapped user. See docs/content/install/multi-user.md."
     if [ "$YES" -eq 1 ]; then die "Re-run without --yes to switch, or run: ./install.sh --multi-user"; fi
     read -r -p "Switch to the multi-user install now? It needs sudo. (y/n) [y]: " reply
     [ "${reply:-y}" = y ] || exit 1
     SWITCH=1
   fi
 
-  echo "Before this works, $EMAIL must be a member of your Cloudflare account:"
-  echo "  dash.cloudflare.com > Manage Account > Members > Invite, role 'Minimal Account Access', and they must accept."
-  echo "  You can run this command before or after that."
+  title "Adding $(cyan "$EMAIL") → Linux user $(bold "$LINUX_USER")"
+  echo
+  echo "  Before this works, $EMAIL must be a $(bold 'member of your Cloudflare account'):"
+  note "dash.cloudflare.com → Manage Account → Members → Invite, role 'Minimal Account Access'. They must accept."
+  note "You can run this command before or after that."
   if [ -z "${CF_API_TOKEN:-}" ]; then
-    echo "This command needs a Cloudflare API token, used once and never saved."
-    echo "  Create one at https://dash.cloudflare.com/profile/api-tokens > Create Token > Create Custom Token, with:"
-    echo "    Account · Cloudflare Tunnel · Edit"
-    echo "    Account · Access: Apps and Policies · Edit"
-    echo "    Account · Access: Organizations, Identity Providers, and Groups · Read"
-    echo "    Zone · DNS · Edit, for the zone of $HOST"
-    echo "  Set the TTL start date to today. Guide: https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html"
+    echo
+    echo "  This command needs a $(bold 'Cloudflare API token'), used once and never saved."
+    note "Create one at $(link https://dash.cloudflare.com/profile/api-tokens) → Create Token → Create Custom Token, with:"
+    printf '    %s%-9s%s %-58s %s\n' "$C_DIM" Account "$C_RESET" "Cloudflare Tunnel" "$(bold Edit)"
+    printf '    %s%-9s%s %-58s %s\n' "$C_DIM" Account "$C_RESET" "Access: Apps and Policies" "$(bold Edit)"
+    printf '    %s%-9s%s %-58s %s\n' "$C_DIM" Account "$C_RESET" "Access: Organizations, Identity Providers, and Groups" "$(bold Read)"
+    printf '    %s%-9s%s %-58s %s\n' "$C_DIM" Zone "$C_RESET" "DNS, for the zone of $HOST" "$(bold Edit)"
+    note "Set the TTL start date to today. Guide: $(link https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html)"
   fi
   echo
 
@@ -89,28 +93,29 @@ add)
   env_set IDENTITIES "$NEW"
   ok "IDENTITIES=$NEW"
 
-  echo "Updating the Access policy on Cloudflare..."
+  note "Updating the Access policy on Cloudflare..."
   if ! "$APP_DIR/scripts/cloudflare.sh" "$HOST"; then
     env_set IDENTITIES "$OLD"
     die "Cloudflare update failed. The config was restored; nothing changed."
   fi
 
   if [ "$SWITCH" -eq 1 ]; then
-    echo "Switching to the multi-user install (sudo may ask for your password)..."
+    note "Switching to the multi-user install (sudo may ask for your password)..."
     sudo NODE_BIN="$(command -v node)" ENV_FILE="$ENV_FILE" "$APP_DIR/scripts/install-system.sh"
   else
     restart_app
   fi
 
   echo
-  ok "$EMAIL can now log in at https://$HOST as Linux user $LINUX_USER."
-  echo "  Still to do:"
-  echo "  1. If $EMAIL isn't a member of your Cloudflare account yet, invite it:"
-  echo "     dash.cloudflare.com > Manage Account > Members > Invite, role 'Minimal Account Access'."
-  echo "     They must accept the invitation before Cloudflare lets them in."
-  echo "  2. Delete the API token at https://dash.cloudflare.com/profile/api-tokens. Nothing running uses it."
-  echo "  3. Send them the link https://$HOST and the short guide:"
-  echo "     https://syan-dev.github.io/cloudflare-tmux/usage.html"
+  ok "$(cyan "$EMAIL") can now log in at $(link "https://$HOST") as Linux user $(bold "$LINUX_USER")."
+  echo
+  echo "  $(bold 'Still to do:')"
+  step 1 "If $EMAIL isn't a member of your Cloudflare account yet, invite it:"
+  note "   dash.cloudflare.com → Manage Account → Members → Invite, role 'Minimal Account Access'."
+  note "   They must accept the invitation before Cloudflare lets them in."
+  step 2 "Delete the API token at $(link https://dash.cloudflare.com/profile/api-tokens). Nothing running uses it."
+  step 3 "Send them the link $(link "https://$HOST") and the short guide:"
+  note "   $(link https://syan-dev.github.io/cloudflare-tmux/usage.html)"
   ;;
 
 remove)
@@ -126,10 +131,10 @@ remove)
   if [ -n "${CF_API_TOKEN:-}" ]; then
     "$APP_DIR/scripts/cloudflare.sh" "$(env_get PUBLIC_HOST)"
   else
-    echo "  Later, with a fresh API token, take them out of the Access policy too:"
-    echo "    scripts/cloudflare.sh $(env_get PUBLIC_HOST)"
+    note "Later, with a fresh API token, take them out of the Access policy too:"
+    note "  scripts/cloudflare.sh $(env_get PUBLIC_HOST)"
   fi
-  echo "  Optional: remove them under Manage Account > Members, and run scripts/totp.js remove $EMAIL if you use the two-step code."
+  note "Optional: remove them under Manage Account → Members, and run scripts/totp.js remove $EMAIL if you use the two-step code."
   ;;
 
 *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;

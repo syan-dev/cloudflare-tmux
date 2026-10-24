@@ -8,13 +8,11 @@ set -uo pipefail
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/config.sh
 . "$APP_DIR/scripts/config.sh"
+# shellcheck source=scripts/ui.sh
+. "$APP_DIR/scripts/ui.sh"
 
 FAILED=0
-ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
-warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
-bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; FAILED=1; }
-fix()  { printf '      fix: %s\n' "$*"; }
-section() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+section() { title "$*"; }
 
 # User-service commands work from cron or sudo too.
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
@@ -22,7 +20,7 @@ export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNT
 if [ -f /etc/systemd/system/cloudflare-tmux.service ]; then MODE=multi; else MODE=single; fi
 
 # ---------- config ----------
-section "Config ($ENV_FILE)"
+section "Config  $(dim "$ENV_FILE")"
 if [ ! -f "$ENV_FILE" ]; then
   bad "config file missing"; fix "run ./install.sh"
   exit 1
@@ -57,7 +55,7 @@ for e in "${entries[@]}"; do
 done
 
 # ---------- services ----------
-section "Services ($MODE-user install)"
+section "Services  $(dim "$MODE-user install")"
 if [ "$MODE" = multi ]; then
   if systemctl is-active -q cloudflare-tmux.service; then ok "app service active (root)"; else bad "app service not running"; fix "sudo systemctl restart cloudflare-tmux; sudo journalctl -u cloudflare-tmux -n 30"; fi
   if systemctl is-enabled -q cloudflare-tmux.service; then ok "app service starts at boot"; else bad "app service not enabled"; fix "sudo systemctl enable cloudflare-tmux"; fi
@@ -136,5 +134,6 @@ print(",".join(sorted(emails)))' "$HOST" 2>/dev/null)" || allowed=""
 fi
 
 echo
-if [ "$FAILED" -eq 0 ]; then printf '\033[32mAll checks passed.\033[0m\n'; else printf '\033[31mSome checks failed.\033[0m See the fix lines above.\n'; fi
+if [ "$FAILED" -eq 0 ]; then printf '%s✓ All checks passed.%s\n' "$C_GREEN$C_BOLD" "$C_RESET"
+else printf '%s✗ Some checks failed.%s %sSee the fix lines above.%s\n' "$C_RED$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"; fi
 exit "$FAILED"
