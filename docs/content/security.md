@@ -60,6 +60,9 @@ and guessing is rate-limited. See [Two-step code](two-step.md).
 
 - tmux runs through `setpriv`, so each person's processes have their own uid, gid and groups, and a clean
   environment.
+- The [file panel](usage.md#files) works the same way. Listing, downloading and uploading run in a helper
+  started through `setpriv` as the person, never as root, so the kernel decides what they may read and write.
+  A person can reach exactly the files their shell can reach, and nothing more.
 - The root service runs only **root-owned** code from `/opt/cloudflare-tmux`. No user can change what root
   executes.
 - Its config in `/etc/cloudflare-tmux/env` is readable only by root.
@@ -69,6 +72,9 @@ and guessing is rate-limited. See [Two-step code](two-step.md).
 Strict headers: `Content-Security-Policy: default-src 'self'`, `X-Frame-Options: DENY`,
 `Referrer-Policy: no-referrer`, `Cache-Control: no-store`. Small request-body limits. Session names are
 validated against `[A-Za-z0-9_-]{1,32}` and always passed to tmux as separate arguments, never through a shell.
+Downloads are sent as attachments with `nosniff`, so a downloaded HTML file never runs on the app's origin.
+Uploads are capped by `MAX_UPLOAD_MB`, written to a temporary file and kept only when every byte arrived, and
+never replace an existing file unless the person confirms.
 
 ## Hardening checklist
 

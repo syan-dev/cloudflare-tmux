@@ -24,6 +24,7 @@ description: Every environment variable, flag and file cloudflare-tmux and its s
 | `TOTP` | `off` | `required` turns on the [two-step code](two-step.md). |
 | `TOTP_SESSION_HOURS` | `12` | How long a verified code lasts before the app asks again, 1 to 720. |
 | `TOTP_FILE` | `~/.config/cloudflare-tmux/totp.json` | Enrolled authenticators and the cookie-signing key, mode `600`. Multi-user: `/etc/cloudflare-tmux/totp.json`. |
+| `MAX_UPLOAD_MB` | `100` | Largest file the [file panel](usage.md#files) accepts, 1 to 5000. Cloudflare's proxy also caps uploads: 100 MB on the Free plan, 200 MB on Pro, 500 MB on Business. |
 | `PUBLIC_HOST` | — | The public hostname. Saved by `cloudflare.sh`, so re-runs don't ask again. |
 | `TUNNEL_NAME` | `cloudflare-tmux` | The tunnel to use. Saved by `cloudflare.sh`, so re-runs keep the same tunnel. |
 | `ACCESS_SESSION` | `24h` | How long a Cloudflare login lasts, for example `8h`. Applied by `cloudflare.sh`, which needs an [API token](cloudflare/api-token.md#when-you-need-it). |

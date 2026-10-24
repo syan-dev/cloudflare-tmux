@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f1115">
   <title>cloudflare-tmux</title>
   <link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="/style.css?v=5">
 </head>
 <body>
   <section id="dashboard" hidden>
@@ -49,8 +49,25 @@
       <a href="#/" class="back" title="Back to sessions (session keeps running)">&larr; Sessions</a>
       <span id="term-name" class="term-name"></span>
       <span id="status" class="status"></span>
+      <button id="files-btn" class="files-btn" title="Files: browse, upload, download">Files</button>
     </header>
-    <div id="terminal"></div>
+    <div class="term-body">
+      <div id="terminal"></div>
+      <aside id="files" class="files" hidden>
+        <div class="files-bar">
+          <button id="files-up" title="Parent folder">&uarr;</button>
+          <button id="files-home" title="Home folder">~</button>
+          <span id="files-path" class="files-path"></span>
+          <button id="files-hidden" title="Show hidden files">.*</button>
+          <button id="files-refresh" title="Refresh">&#8635;</button>
+          <button id="files-upload" class="primary" title="Upload files">Upload</button>
+          <button id="files-close" title="Close the file panel">&#10005;</button>
+        </div>
+        <p id="files-error" class="error files-msg" hidden></p>
+        <ul id="files-list" class="files-list"></ul>
+        <p class="muted files-hint">Drop files anywhere, or paste an image into the terminal, to upload here.</p>
+      </aside>
+    </div>
     <nav id="keys" class="keys">
       <button data-key="esc">Esc</button>
       <button data-key="tab">Tab</button>
@@ -63,12 +80,15 @@
       <button data-key="|">|</button>
       <button data-key="~">~</button>
     </nav>
+    <input type="file" id="files-input" multiple hidden>
+    <div id="drop" class="drop" hidden><div>Drop to upload to <code id="drop-dir"></code></div></div>
   </section>
+  <div id="toasts" class="toasts"></div>
 
   <script src="/vendor/xterm/lib/xterm.js"></script>
   <script src="/vendor/addon-fit/lib/addon-fit.js"></script>
   <script src="/vendor/addon-web-links/lib/addon-web-links.js"></script>
   <script src="/vendor/addon-clipboard/lib/addon-clipboard.js"></script>
-  <script src="/app.js?v=6"></script>
+  <script src="/app.js?v=7"></script>
 </body>
 </html>

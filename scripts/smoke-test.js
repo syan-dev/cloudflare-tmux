@@ -50,7 +50,7 @@ const tmuxHas = (name) => {
 
 async function main() {
   const port = 17681;
-  const srv = await startServer(port, { AUTH_DISABLED: '1' });
+  const srv = await startServer(port, { AUTH_DISABLED: '1', MAX_UPLOAD_MB: '1' });
   const base = `http://127.0.0.1:${port}`;
   const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json', Origin: base }, body: JSON.stringify(body) });
   try {
@@ -102,6 +102,39 @@ async function main() {
     res = await fetch(`${base}/api/sessions/${SESSION}`, { method: 'DELETE', headers: { Origin: base } });
     assert.strictEqual(res.status, 204, 'kill session');
     assert.ok(!tmuxHas(SESSION), 'session gone after kill');
+
+    // Files: list, upload, download, as the mapped user.
+    const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'ct-files-'));
+    const home = await (await fetch(`${base}/api/files`)).json();
+    assert.strictEqual(home.path, require('os').homedir(), 'file list starts at home');
+    assert.ok(Array.isArray(home.entries), 'file list has entries');
+    assert.strictEqual((await fetch(`${base}/api/files?path=relative`)).status, 400, 'relative path refused');
+    assert.strictEqual((await fetch(`${base}/api/files?path=/no/such/dir`)).status, 404, 'missing dir -> 404');
+    const upload = (name, body, extra = '') => fetch(`${base}/api/files/upload?dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}${extra}`, {
+      method: 'POST', headers: { Origin: base, 'Content-Type': 'application/octet-stream' }, body,
+    });
+    res = await upload('a.txt', 'hello\n');
+    assert.strictEqual(res.status, 201, 'upload');
+    assert.strictEqual(fs.readFileSync(path.join(dir, 'a.txt'), 'utf8'), 'hello\n', 'uploaded content');
+    assert.strictEqual((await upload('a.txt', 'again\n')).status, 409, 'no silent overwrite');
+    assert.strictEqual(fs.readFileSync(path.join(dir, 'a.txt'), 'utf8'), 'hello\n', 'refused upload left the file alone');
+    assert.strictEqual((await upload('a.txt', 'again\n', '&overwrite=1')).status, 201, 'explicit overwrite');
+    assert.strictEqual(fs.readFileSync(path.join(dir, 'a.txt'), 'utf8'), 'again\n', 'overwritten content');
+    assert.strictEqual((await upload('../escape', 'x')).status, 400, 'bad file name refused');
+    assert.strictEqual((await upload('big', Buffer.alloc(2 * 1024 * 1024))).status, 413, 'upload over MAX_UPLOAD_MB refused');
+    res = await fetch(`${base}/api/files/upload?dir=${encodeURIComponent(dir)}&name=b.txt`, { method: 'POST', body: 'x' });
+    assert.strictEqual(res.status, 403, 'upload without Origin refused');
+    const listed = await (await fetch(`${base}/api/files?path=${encodeURIComponent(dir)}`)).json();
+    assert.deepStrictEqual(listed.entries.map((e) => e.name), ['a.txt'], 'only the uploaded file is there, no leftovers');
+    assert.strictEqual(listed.entries[0].size, 6, 'listed size');
+    res = await fetch(`${base}/api/files/download?path=${encodeURIComponent(path.join(dir, 'a.txt'))}`);
+    assert.strictEqual(res.status, 200, 'download');
+    assert.match(res.headers.get('content-disposition'), /^attachment; filename="a.txt"/, 'download is an attachment');
+    assert.strictEqual(res.headers.get('x-content-type-options'), 'nosniff', 'download is nosniff');
+    assert.strictEqual(await res.text(), 'again\n', 'downloaded content');
+    assert.strictEqual((await fetch(`${base}/api/files/download?path=${encodeURIComponent(dir)}`)).status, 400, 'downloading a directory refused');
+    assert.strictEqual((await fetch(`${base}/api/files/download?path=${encodeURIComponent(path.join(dir, 'nope'))}`)).status, 404, 'missing file -> 404');
+    fs.rmSync(dir, { recursive: true });
   } finally {
     srv.kill();
     if (tmuxHas(SESSION)) execFileSync('tmux', ['kill-session', '-t', `=${SESSION}`]);
@@ -156,6 +189,7 @@ async function main() {
   try {
     assert.strictEqual((await (await fetch(`${tbase}/api/me`)).json()).twofa, 'needed', 'code needed');
     assert.strictEqual((await fetch(`${tbase}/api/sessions`)).status, 403, 'api blocked without code');
+    assert.strictEqual((await fetch(`${tbase}/api/files`)).status, 403, 'files blocked without code');
     await assert.rejects(attach(totpPort, 'x'), /403/, 'ws blocked without code');
     assert.strictEqual((await post({ code: '000000' })).status, 401, 'wrong code rejected');
     const code = totp.hotp(secret, Math.floor(Date.now() / 30000));

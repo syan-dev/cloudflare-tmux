@@ -11,7 +11,7 @@ const os = require('os');
 const crypto = require('crypto');
 const path = require('path');
 const http = require('http');
-const { execFile, execFileSync } = require('child_process');
+const { execFile, execFileSync, spawn } = require('child_process');
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
@@ -70,6 +70,12 @@ const TOTP_SESSION_HOURS = Number(process.env.TOTP_SESSION_HOURS || 12);
 if (!(TOTP_SESSION_HOURS > 0 && TOTP_SESSION_HOURS <= 720)) fail('TOTP_SESSION_HOURS must be between 1 and 720.');
 const TOTP_COOKIE = 'ct_2fa';
 const TOTP_KEY = TOTP_REQUIRED ? Buffer.from(totp.loadWithKey(TOTP_FILE).key, 'hex') : null;
+
+// Largest upload the file panel accepts. Cloudflare's proxy caps request bodies at 100 MB on the Free plan.
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 100);
+if (!(MAX_UPLOAD_MB > 0 && MAX_UPLOAD_MB <= 5000)) fail('MAX_UPLOAD_MB must be between 1 and 5000.');
+const MAX_UPLOAD = MAX_UPLOAD_MB * 1024 * 1024;
+const FILES_HELPER = path.join(__dirname, 'lib', 'files.js');
 
 // tmux >= 3.2 can send copies to the browser clipboard (OSC 52) via `-T clipboard`.
 const TMUX_CLIPBOARD = (() => {
@@ -210,25 +216,83 @@ function totpCheck(email, code) {
   return { status: 200, cookie: `${exp}.${totpCookieSig(email, exp, secret)}` };
 }
 
-// ---------- running tmux as the mapped user ----------
+// ---------- running programs as the mapped user ----------
 
-// Builds the command that runs `tmux <args>` as `account`.
-function tmuxCommand(account, args) {
+// Builds the command that runs `file args...` as `account` with the given environment.
+// As root, setpriv drops to the person's uid, gid and groups with a clean environment.
+function asUser(account, file, args, env) {
   if (IS_ROOT) {
     return {
       file: '/usr/bin/setpriv',
       args: ['--reuid', String(account.uid), '--regid', String(account.gid), '--init-groups', '--reset-env', '--',
-        '/usr/bin/env', `LANG=${process.env.LANG || 'C.UTF-8'}`, 'TERM=xterm-256color', 'COLORTERM=truecolor',
-        '/usr/bin/tmux', ...args],
+        '/usr/bin/env', ...Object.entries(env).map(([k, v]) => `${k}=${v}`), file, ...args],
       cwd: account.home,
       env: { PATH: '/usr/bin:/bin', TERM: 'xterm-256color' },
     };
   }
-  const env = { ...process.env, TERM: 'xterm-256color', COLORTERM: 'truecolor' };
-  delete env.TMUX;
-  for (const k of ['CF_ACCESS_AUD', 'CF_TEAM_DOMAIN', 'IDENTITIES', 'AUTH_DISABLED']) delete env[k];
-  return { file: 'tmux', args, cwd: account.home, env };
+  const merged = { ...process.env, ...env };
+  delete merged.TMUX;
+  for (const k of ['CF_ACCESS_AUD', 'CF_TEAM_DOMAIN', 'IDENTITIES', 'AUTH_DISABLED']) delete merged[k];
+  return { file, args, cwd: account.home, env: merged };
 }
+
+// Builds the command that runs `tmux <args>` as `account`.
+function tmuxCommand(account, args) {
+  const env = { LANG: process.env.LANG || 'C.UTF-8', TERM: 'xterm-256color', COLORTERM: 'truecolor' };
+  return asUser(account, IS_ROOT ? '/usr/bin/tmux' : 'tmux', args, env);
+}
+
+// Builds the command that runs the file helper (lib/files.js) as `account`.
+function filesCommand(account, args) {
+  return asUser(account, process.execPath, [FILES_HELPER, ...args], {});
+}
+
+// Runs the file helper and resolves with its stdout. `input` is piped to its stdin, `output` receives its stdout
+// instead when given. Rejects with err.code set to the helper's errno (ENOENT, EACCES, EEXIST, ...), or
+// ECANCELED after kill().
+function runFiles(account, args, { input, output, timeout } = {}) {
+  const cmd = filesCommand(account, args);
+  const child = spawn(cmd.file, cmd.args, { cwd: cmd.cwd, env: cmd.env, stdio: ['pipe', 'pipe', 'pipe'] });
+  let killed = false;
+  const promise = new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    let done = false;
+    const finish = (fn, v) => { if (!done) { done = true; clearTimeout(timer); fn(v); } };
+    const timer = timeout && setTimeout(() => { child.kill('SIGKILL'); finish(reject, Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' })); }, timeout);
+    child.on('error', (err) => finish(reject, err));
+    child.stderr.on('data', (d) => { stderr += d; });
+    if (output) child.stdout.pipe(output, { end: false });
+    else child.stdout.on('data', (d) => { stdout += d; });
+    if (input) {
+      // An aborted upload ends the helper's stdin early; it then sees a short file and keeps nothing.
+      input.on('error', () => child.stdin.end());
+      child.stdin.on('error', () => {}); // the helper exits first when it refuses the write
+      input.pipe(child.stdin);
+    } else child.stdin.end();
+    child.on('close', (code) => {
+      if (code === 0) return finish(resolve, stdout);
+      const errno = killed ? 'ECANCELED' : stderr.trim().split('\n')[0] || 'EIO';
+      finish(reject, Object.assign(new Error(`files ${args[0]}: ${errno}`), { code: errno }));
+    });
+  });
+  promise.kill = () => { killed = true; child.kill('SIGKILL'); };
+  return promise;
+}
+
+// HTTP status for a helper failure.
+function filesStatus(err) {
+  return { ENOENT: 404, ENOTDIR: 404, EACCES: 403, EPERM: 403, EEXIST: 409, EISDIR: 400, EINVAL: 400, ELOOP: 400, ENAMETOOLONG: 400 }[err.code] || 500;
+}
+
+// A path from the browser: absolute, no NUL bytes, a sane length. Permissions are left to the kernel,
+// since the helper runs as the person.
+function filePath(value) {
+  const p = String(value || '');
+  if (!p || !path.posix.isAbsolute(p) || p.includes('\0') || p.length > 4096) return null;
+  return path.posix.normalize(p);
+}
+const FILENAME_RE = /^[^/\0]{1,255}$/;
 
 function tmux(account, args) {
   const cmd = tmuxCommand(account, args);
@@ -344,6 +408,74 @@ app.delete('/api/sessions/:name', async (req, res) => {
     await tmux(req.account, ['kill-session', '-t', `=${name}`]);
     res.status(204).end();
   } catch (err) { res.status(500).json({ error: err.stderr || err.message }); }
+});
+
+// ---------- files: the browser file panel ----------
+
+function filesError(res, err, what) {
+  const status = filesStatus(err);
+  if (status === 500) console.warn(`files ${what}: ${err.message}`);
+  const text = { 404: 'Not found', 403: 'Permission denied', 409: 'A file with that name already exists', 400: 'Not a file' }[status]
+    || 'File operation failed';
+  res.status(status).json({ error: text, code: err.code });
+}
+
+// GET /api/files?path=/abs/dir — list a directory. Defaults to the person's home.
+app.get('/api/files', async (req, res) => {
+  const dir = req.query.path === undefined ? req.account.home : filePath(req.query.path);
+  if (!dir) return res.status(400).json({ error: 'Path must be absolute' });
+  try {
+    const out = await runFiles(req.account, ['list', dir], { timeout: 15000 });
+    res.json({ home: req.account.home, ...JSON.parse(out) });
+  } catch (err) { filesError(res, err, `list ${dir}`); }
+});
+
+// GET /api/files/download?path=/abs/file — the file as an attachment.
+app.get('/api/files/download', async (req, res) => {
+  const file = filePath(req.query.path);
+  if (!file) return res.status(400).json({ error: 'Path must be absolute' });
+  let st;
+  try { st = JSON.parse(await runFiles(req.account, ['stat', file], { timeout: 15000 })); } catch (err) { return filesError(res, err, `stat ${file}`); }
+  if (st.type !== 'file') return res.status(400).json({ error: 'Not a file' });
+  const name = path.posix.basename(file);
+  res.set({
+    'Content-Type': 'application/octet-stream',
+    'Content-Length': String(st.size),
+    'Content-Disposition': `attachment; filename="${name.replace(/[^\x20-\x7e]|["\\]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+  });
+  const run = runFiles(req.account, ['read', file], { output: res });
+  res.on('close', () => run.kill());
+  try {
+    await run;
+    res.end();
+    console.log(`download ${req.account.name}:${file} by ${req.email}`);
+  } catch (err) {
+    if (err.code === 'ECANCELED') return; // the browser went away
+    if (!res.headersSent) {
+      for (const h of ['Content-Length', 'Content-Disposition']) res.removeHeader(h);
+      return filesError(res, err, `read ${file}`);
+    }
+    console.warn(`files read ${file}: ${err.message}`);
+    res.destroy(); // a truncated download must not look complete
+  }
+});
+
+// POST /api/files/upload?dir=/abs/dir&name=file.png[&overwrite=1] — the raw request body becomes that file.
+// The helper keeps the file only when exactly Content-Length bytes arrived, so an aborted upload leaves nothing.
+app.post('/api/files/upload', async (req, res) => {
+  const dir = filePath(req.query.dir);
+  const name = String(req.query.name || '');
+  if (!dir || !FILENAME_RE.test(name) || name === '.' || name === '..') return res.status(400).json({ error: 'Bad folder or file name' });
+  const size = Number(req.headers['content-length']);
+  if (!Number.isInteger(size)) return res.status(411).json({ error: 'Content-Length required' });
+  if (size > MAX_UPLOAD) return res.status(413).json({ error: `File is larger than ${MAX_UPLOAD_MB} MB` });
+  const file = path.posix.join(dir, name);
+  const args = ['write', file, String(size), ...(req.query.overwrite === '1' ? ['--overwrite'] : [])];
+  try {
+    await runFiles(req.account, args, { input: req });
+    console.log(`upload ${req.account.name}:${file} (${size} bytes) by ${req.email}`);
+    res.status(201).json({ path: file, size });
+  } catch (err) { filesError(res, err, `write ${file}`); }
 });
 
 // Keep the no-store header set above, so a deploy is picked up on the next page load.

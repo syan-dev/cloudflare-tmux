@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **File panel**: press *Files* in the terminal to browse your folders, download a file, upload by dragging
+  files onto the terminal or with the *Upload* button, and paste a screenshot straight into the terminal to
+  save it as a file. A *path* button types a file's path into the terminal. Everything runs as the mapped
+  Linux user through `setpriv`, uploads are capped by `MAX_UPLOAD_MB` (100 MB, Cloudflare's free-plan limit)
+  and never replace a file without asking.
 - **The `cloudflare-tmux` command**, linked into `~/.local/bin` by the installer: `status` (is it online?),
   `people`, `add`, `remove`, `config`, `logs`, `restart` and `doctor`. One command to learn, whichever install
   you have. Output is colored on a terminal and plain when piped or with `NO_COLOR`.

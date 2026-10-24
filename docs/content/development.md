@@ -34,7 +34,8 @@ Shell scripts are checked with `shellcheck -x install.sh bin/cloudflare-tmux scr
 
 ```text
 server.js                 Express + WebSocket server: auth, tmux API, PTY bridge
-public/                   the web UI (dashboard, xterm.js terminal, mobile keys)
+public/                   the web UI (dashboard, xterm.js terminal, file panel, mobile keys)
+lib/files.js              file helper run as the mapped user: list, stat, read, write
 install.sh                one-command interactive setup
 bin/cloudflare-tmux       the day-to-day command: status, people, add, remove, config, logs, restart, doctor
 scripts/cloudflare.sh     Cloudflare API provisioning (tunnel, IdP, Access, DNS)

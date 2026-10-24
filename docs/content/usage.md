@@ -40,6 +40,27 @@ Plain **Ctrl+C** always sends `^C` to the program.
 Copies made in tmux reach your clipboard, and so do copies from programs inside tmux such as vim. Copying only
 goes one way: nothing in the terminal can read your clipboard. This needs tmux 3.2 or newer.
 
+## Files
+
+Press **Files** in the terminal bar to open the file panel. It shows your home folder.
+
+- **Open a folder**: click its name. **↑** goes up one level, **~** returns home. Dotfiles are hidden until
+  you press **.\***.
+- **Download**: click a file's name.
+- **Upload**: press **Upload**, or drag files from your computer anywhere onto the terminal. They land in the
+  folder the panel shows. If a file with the same name exists, you're asked before it's replaced.
+- **Paste an image**: copy an image or a screenshot, then paste into the terminal with **Ctrl+Shift+V**
+  (Mac: **Cmd+V**). It's saved as `pasted-<date>-<time>.png` in the current folder. Pasted text still goes to
+  the terminal as usual.
+- **path**: types the file's path into the terminal, quoted if needed, so you can pass it to a command.
+  After an upload, the message in the corner has the same button.
+
+The panel runs as your Linux user, so you see exactly what `ls` would show you. Uploads are limited to
+`MAX_UPLOAD_MB`, 100 MB by default, which is also what Cloudflare's free plan allows per request.
+Folders can't be uploaded, only files.
+
+On a phone the panel covers the terminal. Close it with **✕** or by pressing **path**.
+
 ## Mobile key bar
 
 On touch devices a key bar appears under the terminal:

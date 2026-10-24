@@ -226,6 +226,7 @@ function openSession(name) {
   $('term-name').textContent = name;
   ensureTerminal();
   term.reset();
+  showFiles(isWide() && store.get('files-open') === '1', false);
   connect(name);
 }
 
@@ -256,6 +257,283 @@ $('keys').addEventListener('click', (e) => {
   else if (btn.dataset.key) sendInput(KEYS[btn.dataset.key] ?? btn.dataset.key);
   term && term.focus();
 });
+
+// ---------- files panel ----------
+
+// Browses the person's files, uploads by drop, paste or button, and downloads. Everything goes through
+// /api/files, which the server runs as the same Linux user as the terminal.
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+};
+const files = { dir: null, home: null, hidden: store.get('files-hidden') === '1' };
+const isWide = () => window.matchMedia('(min-width: 721px)').matches;
+
+function filesVisible() { return !$('files').hidden; }
+
+function showFiles(on, remember = true) {
+  $('files').hidden = !on;
+  $('files-btn').classList.toggle('active', on);
+  if (remember) store.set('files-open', on ? '1' : '0');
+  if (fit && currentSession) fit.fit();
+  if (on && !files.dir) loadFiles();
+}
+
+function filesError(msg) {
+  $('files-error').textContent = msg || '';
+  $('files-error').hidden = !msg;
+}
+
+async function loadFiles(dir) {
+  filesError('');
+  let data;
+  try { data = await api('GET', '/api/files' + (dir ? `?path=${encodeURIComponent(dir)}` : '')); }
+  catch (err) { return filesError(err.message); }
+  files.dir = data.path;
+  files.home = data.home;
+  renderFiles(data.entries);
+}
+
+function fmtSize(n) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} K`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} M`;
+  return `${(n / 1024 ** 3).toFixed(1)} G`;
+}
+
+// Shows "~/sub/dir" with each segment clickable.
+function renderPath() {
+  const el = $('files-path');
+  el.replaceChildren();
+  const home = files.home.replace(/\/$/, '');
+  const inHome = files.dir === home || files.dir.startsWith(home + '/');
+  const base = inHome ? home : '';
+  const rest = inHome ? files.dir.slice(home.length) : files.dir;
+  const root = document.createElement('span');
+  root.textContent = inHome ? '~' : '/';
+  root.onclick = () => loadFiles(inHome ? home : '/');
+  el.append(root);
+  let acc = base;
+  for (const seg of rest.split('/').filter(Boolean)) {
+    acc += '/' + seg;
+    const target = acc;
+    const span = document.createElement('span');
+    span.textContent = seg;
+    span.onclick = () => loadFiles(target);
+    el.append('/', span);
+  }
+  el.title = files.dir;
+}
+
+function renderFiles(entries) {
+  renderPath();
+  $('files-hidden').classList.toggle('active', files.hidden);
+  const list = $('files-list');
+  list.replaceChildren();
+  const shown = entries.filter((e) => files.hidden || !e.name.startsWith('.'));
+  shown.sort((a, b) => (a.type === 'dir') === (b.type === 'dir') ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) : a.type === 'dir' ? -1 : 1);
+  for (const e of shown) {
+    const full = files.dir.replace(/\/$/, '') + '/' + e.name;
+    const li = document.createElement('li');
+    let name;
+    if (e.type === 'dir') {
+      name = document.createElement('a');
+      name.href = '#';
+      name.textContent = e.name + '/';
+      name.onclick = (ev) => { ev.preventDefault(); loadFiles(full); };
+    } else if (e.type === 'file') {
+      name = document.createElement('a');
+      name.href = `/api/files/download?path=${encodeURIComponent(full)}`;
+      name.download = e.name;
+      name.title = `Download ${e.name}`;
+      name.textContent = e.name;
+    } else {
+      name = document.createElement('span');
+      name.textContent = e.name;
+    }
+    name.className = `fname ${e.type}`;
+    const size = document.createElement('span');
+    size.className = 'fsize';
+    size.textContent = e.type === 'file' ? fmtSize(e.size) : '';
+    const insert = document.createElement('button');
+    insert.className = 'fact';
+    insert.textContent = 'path';
+    insert.title = 'Type this path into the terminal';
+    insert.onclick = () => insertPath(full);
+    li.append(name, size, insert);
+    list.append(li);
+  }
+  if (!shown.length) {
+    const li = document.createElement('li');
+    li.className = 'muted';
+    li.textContent = 'Empty folder';
+    list.append(li);
+  }
+}
+
+// Quotes a path for the shell, as VS Code does when a file is dropped on its terminal.
+function shellQuote(p) {
+  return /^[A-Za-z0-9_/.,:@%+=-]+$/.test(p) ? p : `'${p.replace(/'/g, "'\\''")}'`;
+}
+
+function insertPath(p) {
+  if (!currentSession) return;
+  sendInput(shellQuote(p) + ' ');
+  if (!isWide()) showFiles(false);
+  term.focus();
+}
+
+// Uploads one File into `dir`. Asks before replacing. Resolves with the saved path or null.
+function uploadFile(file, dir, name) {
+  const toast = showToast(`Uploading ${name}…`, { progress: true });
+  const attempt = (overwrite) => new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    const q = `dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}${overwrite ? '&overwrite=1' : ''}`;
+    xhr.open('POST', `/api/files/upload?${q}`);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) toast.progress(ev.loaded / ev.total); };
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch { /* not json */ }
+      if (xhr.status === 401) { location.reload(); return resolve(null); }
+      if (data.twofa) { me.twofa = 'needed'; route(); return resolve(null); }
+      resolve({ status: xhr.status, data });
+    };
+    xhr.onerror = () => resolve({ status: 0, data: { error: 'Network error' } });
+    xhr.send(file);
+  });
+  return (async () => {
+    let r = await attempt(false);
+    if (r && r.status === 409 && confirm(`${name} already exists in ${dir}. Replace it?`)) r = await attempt(true);
+    if (!r) { toast.remove(); return null; }
+    if (r.status !== 201) {
+      toast.update(`${name}: ${r.data.error || `upload failed (${r.status})`}`, { bad: true, ttl: 8000 });
+      return null;
+    }
+    toast.update(`Saved ${r.data.path}`, { ttl: 10000, action: ['Insert path', () => insertPath(r.data.path)] });
+    if (files.dir === dir) loadFiles(dir);
+    return r.data.path;
+  })();
+}
+
+async function uploadAll(fileList) {
+  const list = [...fileList].filter((f) => f.size > 0 || f.type);
+  if (!list.length) return;
+  if (!files.dir) await loadFiles();
+  if (!files.dir) return;
+  const dir = files.dir;
+  if (isWide() && !filesVisible()) showFiles(true);
+  for (const f of list) await uploadFile(f, dir, f.name);
+}
+
+function pastedName(type) {
+  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' }[type] || 'bin';
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `pasted-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
+}
+
+$('files-btn').onclick = () => showFiles(!filesVisible());
+$('files-close').onclick = () => showFiles(false);
+$('files-refresh').onclick = () => loadFiles(files.dir);
+$('files-home').onclick = () => loadFiles();
+$('files-up').onclick = () => { if (files.dir && files.dir !== '/') loadFiles(files.dir.replace(/\/[^/]+\/?$/, '') || '/'); };
+$('files-hidden').onclick = () => {
+  files.hidden = !files.hidden;
+  store.set('files-hidden', files.hidden ? '1' : '0');
+  loadFiles(files.dir);
+};
+$('files-upload').onclick = () => $('files-input').click();
+$('files-input').onchange = () => { uploadAll($('files-input').files); $('files-input').value = ''; };
+
+// Drag and drop anywhere on the terminal view. Folders can't be read by the browser and are skipped.
+{
+  const view = $('terminal-view');
+  let depth = 0;
+  const hasFiles = (ev) => [...(ev.dataTransfer?.types || [])].includes('Files');
+  view.addEventListener('dragenter', (ev) => {
+    if (!hasFiles(ev)) return;
+    ev.preventDefault();
+    if (depth++ === 0) {
+      if (!files.dir) loadFiles();
+      $('drop-dir').textContent = files.dir ? files.dir.replace(files.home, '~') : '~';
+      $('drop').hidden = false;
+    }
+  });
+  view.addEventListener('dragover', (ev) => { if (hasFiles(ev)) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; } });
+  view.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });
+  view.addEventListener('drop', (ev) => {
+    if (!hasFiles(ev)) return;
+    ev.preventDefault();
+    depth = 0;
+    $('drop').hidden = true;
+    const items = [...(ev.dataTransfer.items || [])];
+    const dropped = items.length ? items.filter((it) => it.kind === 'file' && !(it.webkitGetAsEntry?.()?.isDirectory)).map((it) => it.getAsFile()).filter(Boolean)
+      : [...ev.dataTransfer.files];
+    if (items.some((it) => it.webkitGetAsEntry?.()?.isDirectory)) showToast('Folders can\'t be uploaded. Drop files instead.', { bad: true, ttl: 6000 });
+    uploadAll(dropped);
+  });
+}
+
+// A pasted image (or file) in the terminal is uploaded; pasted text still goes to xterm.
+$('terminal').addEventListener('paste', (ev) => {
+  const items = [...(ev.clipboardData?.items || [])].filter((it) => it.kind === 'file');
+  if (!items.length) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const list = items.map((it) => it.getAsFile()).filter(Boolean);
+  (async () => {
+    if (!files.dir) await loadFiles();
+    if (!files.dir) return;
+    const dir = files.dir;
+    if (isWide() && !filesVisible()) showFiles(true);
+    for (const f of list) await uploadFile(f, dir, f.name && f.name !== 'image.png' ? f.name : pastedName(f.type));
+  })();
+}, true);
+
+// ---------- toasts ----------
+
+function showToast(text, opts = {}) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (opts.bad ? ' bad' : '');
+  const row = document.createElement('div');
+  row.className = 't-row';
+  const span = document.createElement('span');
+  span.className = 't-text';
+  span.textContent = text;
+  const close = document.createElement('button');
+  close.textContent = '✕';
+  close.title = 'Dismiss';
+  row.append(span, close);
+  el.append(row);
+  let bar = null;
+  let timer = null;
+  const t = {
+    remove() { clearTimeout(timer); el.remove(); },
+    progress(frac) { if (bar) bar.value = frac; },
+    update(msg, o = {}) {
+      span.textContent = msg;
+      el.classList.toggle('bad', !!o.bad);
+      if (bar) { bar.remove(); bar = null; }
+      row.querySelectorAll('.t-action').forEach((b) => b.remove());
+      if (o.action) {
+        const b = document.createElement('button');
+        b.className = 't-action';
+        b.textContent = o.action[0];
+        b.onclick = () => { o.action[1](); t.remove(); };
+        row.insertBefore(b, close);
+      }
+      clearTimeout(timer);
+      if (o.ttl) timer = setTimeout(t.remove, o.ttl);
+    },
+  };
+  close.onclick = t.remove;
+  if (opts.progress) { bar = document.createElement('progress'); bar.max = 1; bar.value = 0; el.append(bar); }
+  if (opts.ttl) timer = setTimeout(t.remove, opts.ttl);
+  $('toasts').append(el);
+  return t;
+}
 
 // ---------- second step ----------
 

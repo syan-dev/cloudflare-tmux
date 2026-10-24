@@ -29,6 +29,7 @@
 - **No open ports.** Your server connects out to Cloudflare. It works behind NAT and CGNAT.
 - **Sign in with your Cloudflare account.** Only the people you list get in.
 - **Sessions keep running** when you close the tab. It's real tmux, so `tmux attach` works on the server too.
+- **Files too.** Browse folders, download, drag files in, or paste a screenshot into the terminal.
 - **One command to set up.** `./install.sh` does the Cloudflare side and installs the services.
 
 ## How it works

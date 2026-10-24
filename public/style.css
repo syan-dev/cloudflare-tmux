@@ -46,7 +46,49 @@ button.danger { color: var(--danger); }
 .status { font-size: 12px; color: var(--muted); }
 .status.ok { color: var(--ok); }
 .status.bad { color: var(--danger); }
-#terminal { flex: 1; min-height: 0; padding: 4px; background: #000; }
+#terminal { flex: 1; min-width: 0; min-height: 0; padding: 4px; background: #000; }
+.term-body { flex: 1; min-height: 0; display: flex; position: relative; }
+.files-btn { padding: 4px 10px; font-size: 13px; }
+.files-btn.active { border-color: var(--accent); color: var(--accent); }
+
+/* ---- file panel ---- */
+.files { width: 320px; flex: 0 0 auto; display: flex; flex-direction: column; background: var(--panel);
+  border-left: 1px solid var(--border); min-height: 0; }
+.files-bar { display: flex; align-items: center; gap: 4px; padding: 6px; border-bottom: 1px solid var(--border); }
+.files-bar button { padding: 4px 8px; font-size: 13px; flex: 0 0 auto; }
+.files-bar button.active { border-color: var(--accent); color: var(--accent); }
+.files-path { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted);
+  display: flex; justify-content: flex-end; overflow: hidden; white-space: nowrap; }
+.files-path span { flex: 0 0 auto; cursor: pointer; }
+.files-path span:hover { color: var(--text); text-decoration: underline; }
+.files-msg { margin: 8px; font-size: 13px; }
+.files-list { list-style: none; margin: 0; padding: 4px 0; overflow-y: auto; flex: 1; min-height: 0; }
+.files-list li { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 13px; }
+.files-list li:hover { background: var(--bg); }
+.files-list .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text); text-decoration: none; cursor: pointer; font-family: ui-monospace, monospace; }
+.files-list .fname.dir { color: var(--accent); }
+.files-list .fname.other { color: var(--muted); cursor: default; }
+.files-list .fsize { color: var(--muted); font-size: 12px; flex: 0 0 auto; }
+.files-list .fact { padding: 2px 6px; font-size: 12px; flex: 0 0 auto; opacity: .7; }
+.files-list .fact:hover { opacity: 1; }
+.files-hint { margin: 0; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 12px; }
+@media (max-width: 720px) {
+  .files { position: absolute; inset: 0; width: auto; border-left: 0; }
+}
+
+.drop { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(79,140,255,.18);
+  border: 3px dashed var(--accent); font-size: 18px; pointer-events: none; }
+.drop code { font-size: 15px; }
+
+.toasts { position: fixed; right: 12px; bottom: 12px; z-index: 10; display: grid; gap: 8px; max-width: min(380px, 90vw); }
+.toast { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+  font-size: 13px; display: grid; gap: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+.toast.bad { border-color: var(--danger); }
+.toast .t-row { display: flex; align-items: center; gap: 8px; }
+.toast .t-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast button { padding: 4px 8px; font-size: 12px; }
+.toast progress { width: 100%; height: 6px; accent-color: var(--accent); }
 
 .keys { display: none; gap: 4px; padding: 6px; background: var(--panel); border-top: 1px solid var(--border);
   overflow-x: auto; }
