@@ -1,15 +1,15 @@
 ---
-title: Quickstart
+title: Install
 description: Get cloudflare-tmux running on your server in about five minutes with one command.
 ---
 
-# Quickstart
+# Install
 
-One command takes you from a fresh server to a working `https://term.example.com`.
+One command takes you from a fresh server to a working `https://term.example.com`. About five minutes.
 
 > [!NOTE]
-> First check the [Prerequisites](prerequisites.md): a domain on Cloudflare, Zero Trust turned on, and a Linux
-> server with Node.js 18 or newer.
+> First read [Before you start](prerequisites.md): a domain on Cloudflare, Zero Trust turned on, and a Linux
+> server with Node.js 18 or newer. All on free plans.
 
 ## 1. Get the code
 
@@ -51,13 +51,10 @@ It asks three questions:
 - **The API token** from step 2.
 
 It then creates the tunnel, the login method, the Access application and the DNS record on Cloudflare, and
-starts two services on your server: the app and the tunnel. Both start on boot.
+starts two services on your server: the app and the tunnel. Both start on boot, and it links the
+`cloudflare-tmux` command into `~/.local/bin`.
 
-To run it without prompts, pass everything as flags:
-
-```bash
-CF_API_TOKEN=... ./install.sh --yes --host term.example.com --identities you@example.com:$USER
-```
+For scripts, every answer can be a flag. See [Settings and files](configuration.md#installsh-flags).
 
 ## 4. Open it
 
@@ -70,9 +67,19 @@ Delete the token at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudf
 Nothing that's running uses it. You'll create a new one only when you
 [change something on Cloudflare](cloudflare/api-token.md#when-you-need-it), such as adding a person.
 
+## Day to day
+
+```bash
+cloudflare-tmux status                       # is it online?
+cloudflare-tmux add carol@example.com carol  # let someone log in
+cloudflare-tmux doctor                       # something wrong? it tells you the fix
+```
+
 ## Next
 
-- **Secure it.** Your Cloudflare account is now a key to a shell. Work through the
-  [security checklist](security.md#hardening-checklist). It takes about ten minutes.
 - **Add people.** One invite in the Cloudflare dashboard and one command. See [Add a person](add-a-person.md).
-- **Something wrong?** See [Troubleshooting](troubleshooting.md). Re-running `./install.sh` is always safe.
+- **Learn the screen.** [Using it](usage.md) covers the dashboard, copy and paste, and the phone key bar.
+- **Something wrong?** Run `cloudflare-tmux doctor`, then see [Troubleshooting](troubleshooting.md).
+  Re-running `./install.sh` is always safe.
+- **Later: secure it further.** Your Cloudflare account is now a key to a shell. The
+  [security checklist](security.md#hardening-checklist) takes about ten minutes.

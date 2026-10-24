@@ -1,9 +1,11 @@
 ---
-title: Single-user install
+title: Single-user install, in detail
 description: Run cloudflare-tmux and its tunnel as systemd user services under your own account.
 ---
 
-# Single-user install
+# Single-user install, in detail
+
+You don't need this page to install. It explains what `./install.sh` does in the default case.
 
 This is the default. The app and the tunnel run as **your** Linux user, as systemd **user** services, and
 start at boot. Only Cloudflare accounts mapped to *your* username can open a terminal.

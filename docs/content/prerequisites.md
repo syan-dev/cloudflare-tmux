@@ -1,9 +1,9 @@
 ---
-title: Prerequisites
+title: Before you start
 description: The three things you need before installing cloudflare-tmux.
 ---
 
-# Prerequisites
+# Before you start
 
 You need three things, all on free plans:
 
@@ -70,4 +70,4 @@ The installer checks the rest and downloads `cloudflared` for you.
 
 Start with just yourself. You can [add people](add-a-person.md) later, each with their own Linux user if you like.
 
-Ready? Go to the [Quickstart](quickstart.md).
+Ready? Go to [Install](quickstart.md).

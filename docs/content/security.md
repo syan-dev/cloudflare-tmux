@@ -72,7 +72,7 @@ validated against `[A-Za-z0-9_-]{1,32}` and always passed to tmux as separate ar
 
 ## Hardening checklist
 
-Do this once after the [Quickstart](quickstart.md), and again whenever you add someone. Most steps need no
+Do this once after the [install](quickstart.md), and again whenever you add someone. Most steps need no
 API token.
 
 ### 1. Cloudflare accounts
@@ -138,7 +138,7 @@ These change Cloudflare, so they need a token or the dashboard.
 
 - [ ] Keep the OS, Node.js and tmux patched, for example with `unattended-upgrades` on Debian and Ubuntu.
 - [ ] Update `cloudflared` regularly with `scripts/install-cloudflared.sh --restart`. It doesn't update itself.
-  See [Operations](operations.md#update-cloudflared).
+  See [Maintenance](operations.md#update-cloudflared).
 
 ### 6. Watch it
 
@@ -146,11 +146,11 @@ These change Cloudflare, so they need a token or the dashboard.
 - [ ] The app logs every attach, detach and refusal:
 
   ```bash
-  journalctl --user -u cloudflare-tmux | grep -E 'attach|rejected'
+  cloudflare-tmux logs | grep -E 'attach|rejected'
   ```
 
-  `auth rejected` and `2fa rejected` lines from people you don't expect are worth a look. In the multi-user
-  install, use `sudo journalctl -u cloudflare-tmux`.
+  `auth rejected` and `2fa rejected` lines from people you don't expect are worth a look.
+  `cloudflare-tmux people` shows each person's last login.
 
 ## If something goes wrong
 

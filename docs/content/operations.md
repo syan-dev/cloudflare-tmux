@@ -1,16 +1,13 @@
 ---
-title: Operations
-description: Status, logs, restarts, updates, and a complete uninstall.
+title: Maintenance
+description: The cloudflare-tmux command, updates, logs, and a complete uninstall.
 ---
 
-# Operations
-
-The commands below are for the single-user install. The [multi-user](#multi-user-install) section at the end
-lists what differs.
+# Maintenance
 
 ## The cloudflare-tmux command
 
-The installer links `bin/cloudflare-tmux` into `~/.local/bin`. It is the one command for day-to-day work:
+The installer links `bin/cloudflare-tmux` into `~/.local/bin`. It is the one command for day-to-day work.
 
 ```bash
 cloudflare-tmux status                 # is it online? app, tunnel, public URL, how many people
@@ -23,20 +20,14 @@ cloudflare-tmux restart                # restart the app the right way for this 
 cloudflare-tmux doctor                 # check everything and print the fix for anything wrong
 ```
 
-Output is colored when it goes to a terminal. Set `NO_COLOR=1` or pipe it to turn colors off.
+Output is colored on a terminal. Set `NO_COLOR=1` or pipe it to turn colors off.
 
 If the command isn't found, `~/.local/bin` isn't on your `PATH` yet. Log out and in, or run
 `export PATH="$HOME/.local/bin:$PATH"`. From the checkout, `./install.sh add|remove|list|doctor` does the same.
 
-## Status and logs
+## Logs
 
-```bash
-systemctl --user status cloudflare-tmux cloudflare-tmux-cloudflared
-journalctl --user -u cloudflare-tmux -f               # logins, attach/detach, refusals
-journalctl --user -u cloudflare-tmux-cloudflared -f   # the tunnel
-```
-
-Typical log lines:
+`cloudflare-tmux logs` shows the app log. Typical lines:
 
 ```text
 cloudflare-tmux listening on http://127.0.0.1:7681 as alice; identities: alice@example.com→alice
@@ -45,29 +36,26 @@ detach alice/work by alice@example.com (ws 1001)
 auth rejected GET /: email not mapped: mallory@example.com
 ```
 
-The tunnel's health also shows under **Zero Trust → Networks → Tunnels**. It should say *Healthy*.
+The tunnel has its own log: `journalctl --user -u cloudflare-tmux-cloudflared -f`. Its health also shows under
+**Zero Trust → Networks → Tunnels** in the dashboard. It should say *Healthy*.
 
-## Restart
+Cloudflare keeps a login log too, under **Zero Trust → Logs → Access**, with email and IP for every login.
 
-```bash
-cloudflare-tmux restart
-```
+## Restarts and reboots
 
-It restarts the app the right way for your install. In the multi-user install that re-runs
-`install-system.sh`, which asks for `sudo`.
-
-tmux sessions survive restarts. The unit uses `KillMode=process`, so stopping the app never stops the tmux
-server.
+Both services start at boot and need no login. `cloudflare-tmux restart` restarts the app. tmux sessions
+survive restarts of the app, but not a reboot of the machine.
 
 ## Update the app
 
 ```bash
 cd cloudflare-tmux
 git pull
-scripts/setup.sh
+cloudflare-tmux restart
 ```
 
-No API token needed.
+In the single-user install, run `scripts/setup.sh` instead of the restart the first time after a pull, so new
+dependencies are installed. No API token is needed either way.
 
 ## Update cloudflared
 
@@ -78,30 +66,9 @@ Cloudflare announces a security fix:
 scripts/install-cloudflared.sh --restart
 ```
 
-It downloads the latest release to `~/.local/bin/cloudflared`, checks its SHA-256 against GitHub and
-Cloudflare's release notes, and restarts the tunnel only if the binary changed. No API token needed.
-
-If your `cloudflared` comes from a package manager, update it there instead and run
-`systemctl --user restart cloudflare-tmux-cloudflared`.
-
-## Check the install
-
-```bash
-cloudflare-tmux doctor
-```
-
-One line per check, with the fix next to anything that fails. Run it after a reboot, after changing the config,
-or when someone can't get in.
-
-## Add or remove a person
-
-```bash
-cloudflare-tmux add carol@example.com carol     # asks for a short-lived API token
-cloudflare-tmux remove carol@example.com        # no token needed
-cloudflare-tmux people
-```
-
-See [Cloudflare login](cloudflare/cloudflare-login.md) for inviting them as a member first.
+It downloads the latest release, checks its SHA-256 against GitHub and Cloudflare's release notes, and restarts
+the tunnel only if the binary changed. If your `cloudflared` comes from a package manager, update it there
+instead and run `systemctl --user restart cloudflare-tmux-cloudflared`.
 
 ## Uninstall
 
@@ -113,41 +80,24 @@ See [Cloudflare login](cloudflare/cloudflare-login.md) for inviting them as a me
    systemctl --user daemon-reload
    ```
 
-2. Remove the local secrets:
+   Multi-user install, also:
 
    ```bash
-   rm -f ~/.cloudflared/cloudflare-tmux.token
+   sudo systemctl disable --now cloudflare-tmux
+   sudo rm -rf /etc/systemd/system/cloudflare-tmux.service /opt/cloudflare-tmux /etc/cloudflare-tmux
+   sudo systemctl daemon-reload
+   ```
+
+2. Remove the local secrets and the command:
+
+   ```bash
+   rm -f ~/.cloudflared/cloudflare-tmux.token ~/.local/bin/cloudflare-tmux
    rm -r ~/.config/cloudflare-tmux        # config and two-step authenticators
    ```
 
 3. In the Cloudflare dashboard, in this order:
    - **DNS**: delete the `term` CNAME record, so the hostname stops resolving.
    - **Zero Trust → Access → Applications**: delete `cloudflare-tmux`.
-   - **Zero Trust → Networks → Tunnels**: delete `cloudflare-tmux`.
+   - **Zero Trust → Networks → Tunnels**: delete the tunnel.
 
 4. Your tmux sessions are untouched. End them with `tmux kill-server` if you want.
-
-## Multi-user install
-
-The app is a system service running as root. The tunnel is still a user service.
-
-```bash
-sudo systemctl status cloudflare-tmux
-sudo journalctl -u cloudflare-tmux -f
-sudo systemctl restart cloudflare-tmux
-```
-
-After `git pull`, run both of these. After changing only the config file, the second is enough:
-
-```bash
-scripts/setup.sh
-sudo NODE_BIN="$(command -v node)" scripts/install-system.sh
-```
-
-To uninstall, also run:
-
-```bash
-sudo systemctl disable --now cloudflare-tmux
-sudo rm -rf /etc/systemd/system/cloudflare-tmux.service /opt/cloudflare-tmux /etc/cloudflare-tmux
-sudo systemctl daemon-reload
-```

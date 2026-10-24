@@ -1,9 +1,9 @@
 ---
-title: Usage
+title: Using it
 description: Using the session dashboard, the terminal, the mobile key bar, and tmux itself.
 ---
 
-# Usage
+# Using it
 
 ## Dashboard
 

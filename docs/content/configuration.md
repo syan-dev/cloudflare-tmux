@@ -1,9 +1,9 @@
 ---
-title: Configuration
+title: Settings and files
 description: Every environment variable, flag and file cloudflare-tmux and its scripts use.
 ---
 
-# Configuration
+# Settings and files
 
 ## The config file
 
@@ -47,7 +47,7 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 | Script | What it does |
 |---|---|
 | `./install.sh` | The whole setup. Safe to re-run. Links the `cloudflare-tmux` command into `~/.local/bin`. |
-| `cloudflare-tmux` | Day-to-day: `status`, `people`, `add`, `remove`, `config`, `logs`, `restart`, `doctor`. See [Operations](operations.md#the-cloudflare-tmux-command). `./install.sh add\|remove\|list\|doctor` are the same. |
+| `cloudflare-tmux` | Day-to-day: `status`, `people`, `add`, `remove`, `config`, `logs`, `restart`, `doctor`. See [Maintenance](operations.md#the-cloudflare-tmux-command). `./install.sh add\|remove\|list\|doctor` are the same. |
 | `scripts/people.sh`, `scripts/doctor.sh` | What `add`/`remove`/`people` and `doctor` run. |
 | `scripts/cloudflare.sh <host>` | Creates or updates everything on Cloudflare from the config. Needs an API token. |
 | `scripts/setup.sh` | Installs or restarts the user services. Single-user install. |
@@ -65,6 +65,12 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 | `NODE_BIN` | `install-system.sh` | Node binary to copy into `/opt/cloudflare-tmux`. Defaults to `command -v node`. |
 
 ## `install.sh` flags
+
+For scripts, every answer can be a flag:
+
+```bash
+CF_API_TOKEN=... ./install.sh --yes --host term.example.com --identities you@example.com:$USER
+```
 
 | Flag | Description |
 |---|---|
