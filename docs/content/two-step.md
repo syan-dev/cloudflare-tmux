@@ -34,7 +34,7 @@ authenticator is refused.
 3. **Restart the app.** Your tmux sessions aren't affected.
 
    ```bash
-   systemctl --user restart cloudflare-tmux
+   cloudflare-tmux restart
    ```
 
 > [!NOTE]

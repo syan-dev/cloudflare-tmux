@@ -28,7 +28,7 @@ npm test
    session survived, then kills it.
 2. with auth enabled: checks that requests and WebSocket upgrades without a valid Access JWT get a 401.
 
-Shell scripts are checked with `shellcheck install.sh scripts/*.sh`. CI runs both.
+Shell scripts are checked with `shellcheck -x install.sh bin/cloudflare-tmux scripts/*.sh`. CI runs both.
 
 ## Project layout
 
@@ -36,9 +36,13 @@ Shell scripts are checked with `shellcheck install.sh scripts/*.sh`. CI runs bot
 server.js                 Express + WebSocket server: auth, tmux API, PTY bridge
 public/                   the web UI (dashboard, xterm.js terminal, mobile keys)
 install.sh                one-command interactive setup
+bin/cloudflare-tmux       the day-to-day command: status, people, add, remove, config, logs, restart, doctor
 scripts/cloudflare.sh     Cloudflare API provisioning (tunnel, IdP, Access, DNS)
+scripts/people.sh         add/remove/list people (behind cloudflare-tmux add|remove|people)
+scripts/doctor.sh         health checks with fixes (behind cloudflare-tmux doctor)
 scripts/setup.sh          systemd user services (single-user)
 scripts/install-system.sh root system service (multi-user)
+scripts/totp.js           enroll authenticators for the two-step code
 scripts/smoke-test.js     end-to-end tests
 deploy/*.service          systemd unit templates
 docs/                     this documentation site (Tailwind)

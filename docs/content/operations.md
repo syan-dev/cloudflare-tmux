@@ -48,8 +48,11 @@ The tunnel's health also shows under **Zero Trust → Networks → Tunnels**. It
 ## Restart
 
 ```bash
-systemctl --user restart cloudflare-tmux
+cloudflare-tmux restart
 ```
+
+It restarts the app the right way for your install. In the multi-user install that re-runs
+`install-system.sh`, which asks for `sudo`.
 
 tmux sessions survive restarts. The unit uses `KillMode=process`, so stopping the app never stops the tmux
 server.

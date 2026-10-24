@@ -16,11 +16,9 @@ CF_API_TOKEN=... cloudflare-tmux doctor     # also compares the Cloudflare Acces
 If that passes and something is still wrong, read the logs. They almost always name the problem:
 
 ```bash
-journalctl --user -u cloudflare-tmux -n 50 --no-pager
-journalctl --user -u cloudflare-tmux-cloudflared -n 50 --no-pager
+cloudflare-tmux logs                                        # the app, whichever install you have
+journalctl --user -u cloudflare-tmux-cloudflared -n 50 --no-pager   # the tunnel
 ```
-
-In the multi-user install, the first one is `sudo journalctl -u cloudflare-tmux -n 50 --no-pager`.
 
 ## Browser shows "Not signed in" or "Unauthorized" (401)
 
