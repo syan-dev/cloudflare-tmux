@@ -5,6 +5,9 @@ description: Sign in with your Cloudflare account. Invite people as members, map
 
 # Cloudflare login
 
+Each person has two identities here. Their **Cloudflare account email** is what they log in with. Their
+**Linux user** is the account their shell runs as. `IDENTITIES` maps one to the other.
+
 Everyone signs in with their own Cloudflare account. Cloudflare Access lets a person through only if they're a
 **member of your Cloudflare account** and their email is on your list of who may log in, `IDENTITIES` in the
 config file.
@@ -14,7 +17,8 @@ Access always sees their Cloudflare account email.
 
 ## Add a person
 
-You're already a member of your own account. For everyone else:
+Two things have to be true before someone can log in. They must be a **member of your Cloudflare account**,
+and their email must be **on your list**. One command handles the list, Cloudflare and the restart.
 
 1. **Invite them.** In the [Cloudflare dashboard](https://dash.cloudflare.com), go to
    **Manage Account → Members → Invite** and enter the email of **their** Cloudflare account. They can create a
@@ -22,48 +26,66 @@ You're already a member of your own account. For everyone else:
 2. **Give them the role Minimal Account Access.** That makes them a member without letting them see or change
    your zones, tunnels or Access settings. Never give them an administrator or Zero Trust role.
 3. **Wait for them to accept** the invitation, from the email or from their own dashboard.
-4. **Add them to the list.** In `~/.config/cloudflare-tmux/env`, add `their-email:linux-user` to `IDENTITIES`.
-   People mapped to the same Linux user share its sessions.
-5. **Create a short-lived [API token](api-token.md#create-it).** The one from setup wasn't saved, and adding a
-   person changes the Access policy on Cloudflare.
-6. **Update Cloudflare and restart the app.** The first command asks for the token.
+4. **Create a short-lived [API token](api-token.md#create-it).** Adding a person changes the Access policy on
+   Cloudflare. Set the token's start date to today.
+5. **Run one command.** It asks for the token, which it never saves.
 
    ```bash
-   scripts/cloudflare.sh term.example.com
-   scripts/setup.sh
+   scripts/people.sh add carol@example.com carol
    ```
 
-7. **Delete the token** at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens).
+   The second argument is the Linux user they get. Leave it out to map them to your own user. People mapped
+   to the same Linux user share its sessions.
+6. **Delete the token** at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens).
+
+The command checks that the Linux user exists, adds `carol@example.com:carol` to `IDENTITIES` in
+`~/.config/cloudflare-tmux/env`, updates the Access policy and restarts the app.
+
+If you map someone to a Linux user **other than your own**, the app must run as root to start tmux as that
+user. The command explains this and offers to switch to the [multi-user install](../install/multi-user.md).
+The switch needs `sudo`. Create the Linux user first with `sudo adduser carol`.
 
 Being a member alone isn't enough. A member whose email isn't on the list is refused, both by Access and by
-the app.
+the app. The app shows them a page that says so and names the command to run.
 
 > [!NOTE]
 > After joining, the Cloudflare dashboard may open on **your** account, where almost everything is locked for
 > them. That's expected. The **account switcher** at the top of the dashboard takes them back to their own
 > account. Joining doesn't change anything in their own account.
 
+## See who may log in
+
+```bash
+scripts/people.sh list
+```
+
+It also tells you which install you have, single-user or multi-user.
+
 ## Remove a person
 
-1. **Lock them out now.** Remove their entry from `IDENTITIES` and restart the app. No token needed.
+1. **Lock them out now.** No token needed. The app refuses them from then on, even with a valid Cloudflare login.
 
    ```bash
-   systemctl --user restart cloudflare-tmux
+   scripts/people.sh remove carol@example.com
    ```
 
-   From then on the app refuses them, even with a valid Cloudflare login.
-2. **Tidy up later.** Run `scripts/cloudflare.sh term.example.com` with a fresh [API token](api-token.md#create-it)
-   to take them out of the Access policy too.
+2. **Tidy up later.** Run `scripts/cloudflare.sh` with a fresh [API token](api-token.md#create-it) to take them
+   out of the Access policy too. If `CF_API_TOKEN` is set, the remove command does this for you.
 3. **Optionally** remove them under **Manage Account → Members**, and run `scripts/totp.js remove their@email`
    if you use the [two-step code](../two-step.md).
 
 Their tmux sessions keep running after the lockout. See
 [If something goes wrong](../security.md#if-something-goes-wrong) for a full cleanup.
 
-> [!NOTE]
-> **Multi-user install:** create the Linux user first with `sudo adduser carol`. Then, wherever this page says
-> `scripts/setup.sh` or a restart, run `sudo NODE_BIN="$(command -v node)" scripts/install-system.sh` instead.
-> See [Multi-user install](../install/multi-user.md).
+## By hand
+
+The command does nothing you can't do yourself:
+
+1. Edit `IDENTITIES` in `~/.config/cloudflare-tmux/env`.
+2. Run `scripts/cloudflare.sh term.example.com` to update the Access policy. Skip this when removing someone
+   in a hurry.
+3. Restart the app. Single-user install: `systemctl --user restart cloudflare-tmux`. Multi-user install:
+   `sudo NODE_BIN="$(command -v node)" scripts/install-system.sh`.
 
 ## Protect the accounts
 

@@ -58,7 +58,13 @@ Open `https://term.example.com` and sign in with your Cloudflare account.
 
 Afterwards, [delete the API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#delete-it-afterwards)
 and go through the [security checklist](https://syan-dev.github.io/cloudflare-tmux/security.html#hardening-checklist).
-To let more people in, see [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html).
+To let more people in, invite them as members of your Cloudflare account and run one command:
+
+```bash
+scripts/people.sh add carol@example.com carol
+```
+
+See [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html).
 
 Without prompts, for scripts:
 

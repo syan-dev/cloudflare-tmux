@@ -49,10 +49,20 @@ sudo NODE_BIN="$(command -v node)" scripts/install-system.sh  # always; no token
 
 ## Add or remove a person
 
-Follow [Cloudflare login](../cloudflare/cloudflare-login.md), with two differences:
+Create the Linux user first, then use the same command as in the single-user install. It detects the
+multi-user install and re-runs `install-system.sh` for you, which asks for `sudo`.
 
-- Create the Linux user first: `sudo adduser carol`.
-- Run `install-system.sh` as above instead of `scripts/setup.sh` or a restart.
+```bash
+sudo adduser carol
+scripts/people.sh add carol@example.com carol
+scripts/people.sh remove carol@example.com
+```
 
-To lock someone out in a hurry, remove their entry from `IDENTITIES` and run only `install-system.sh`. The app
-refuses them right away. Tidy the Access policy with `cloudflare.sh` later.
+See [Cloudflare login](../cloudflare/cloudflare-login.md) for the Cloudflare side: inviting them as a member
+and the API token.
+
+## Switching from the single-user install
+
+You don't have to decide up front. When you add someone with a Linux user other than your own,
+`scripts/people.sh add` offers to switch. `./install.sh` does the same when `IDENTITIES` names other users.
+Your sessions and config stay as they are. Only the app service moves from your user to root.

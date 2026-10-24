@@ -74,6 +74,8 @@ Nothing that's running uses it. You'll create a new one only when you
 
 - **Secure it.** Your Cloudflare account is now a key to a shell. Work through the
   [security checklist](security.md#hardening-checklist). It takes about ten minutes.
-- **Add people.** See [Cloudflare login](cloudflare/cloudflare-login.md). To give each person their own Linux
-  user, see [Multi-user install](install/multi-user.md).
+- **Add people.** Invite them as a member of your Cloudflare account, then run
+  `scripts/people.sh add their@email.com`. See [Cloudflare login](cloudflare/cloudflare-login.md). To give
+  each person their own Linux user, add it as a second argument. The command offers the
+  [multi-user install](install/multi-user.md) when that's needed.
 - **Something wrong?** See [Troubleshooting](troubleshooting.md). Re-running `./install.sh` is always safe.

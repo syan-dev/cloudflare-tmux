@@ -118,6 +118,7 @@ async function main() {
   assert.ok(await startFails({ ...cf, IDENTITIES: 'a@b.c' }), 'malformed mapping refused');
   assert.ok(await startFails({ ...cf, IDENTITIES: 'a@b.c:x,A@b.c:y' }), 'duplicate email refused');
   assert.ok(await startFails({ ...cf, IDENTITIES: '' }), 'missing mapping refused');
+  if (process.getuid() !== 0) assert.ok(await startFails({ ...cf, IDENTITIES: `a@b.c:${ME},d@e.f:nobody` }), 'other Linux user without root refused');
 
   // Auth enabled: requests without / with a forged Access JWT are rejected.
   const authPort = port + 1;
@@ -131,6 +132,10 @@ async function main() {
       .map((p) => Buffer.from(JSON.stringify(p)).toString('base64url')).join('.') + '.sig';
     res = await fetch(`http://127.0.0.1:${authPort}/`, { headers: { 'Cf-Access-Jwt-Assertion': forged } });
     assert.strictEqual(res.status, 401, 'forged token -> 401');
+    res = await fetch(`http://127.0.0.1:${authPort}/`, { headers: { Accept: 'text/html' } });
+    assert.strictEqual(res.status, 401, 'browser without token -> 401');
+    assert.match(await res.text(), /<title>Not signed in<\/title>/, 'browser gets a readable page');
+    assert.doesNotMatch(await (await fetch(`http://127.0.0.1:${authPort}/`, { headers: { Accept: 'text/html' } })).text(), /mapped|IDENTITIES/, 'generic reason for a missing token');
     await assert.rejects(attach(authPort, 'x'), /401/, 'ws without token -> 401');
   } finally {
     srv2.kill();

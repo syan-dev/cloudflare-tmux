@@ -29,7 +29,10 @@ ACCESS_SESSION="${ACCESS_SESSION:-24h}"
 [[ "$ACCESS_SESSION" =~ ^[0-9]+(m|h)$ ]] || { echo "ACCESS_SESSION must look like 30m or 8h"; exit 1; }
 API=https://api.cloudflare.com/client/v4
 if [ -n "${CF_API_TOKEN:-}" ]; then TOKEN="$CF_API_TOKEN"
-elif [ -t 0 ]; then read -r -s -p "Cloudflare API token (not saved): " TOKEN; echo
+elif [ -t 0 ]; then
+  echo "A Cloudflare API token is needed for this run. It is never saved."
+  echo "  How to create one: https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html#create-it"
+  read -r -s -p "Cloudflare API token: " TOKEN; echo
 else echo "No API token: run interactively, or set CF_API_TOKEN (see docs/content/cloudflare/api-token.md)"; exit 1; fi
 [ -n "$TOKEN" ] || { echo "Token is required"; exit 1; }
 IDENTITIES="$(env_get IDENTITIES)"
@@ -42,10 +45,36 @@ cf() {  # cf METHOD PATH [JSON]; prints .result, exits on API error
   curl -sS -X "$1" -H @<(printf 'Authorization: Bearer %s\n' "$TOKEN") -H 'Content-Type: application/json' \
     "$API$2" ${3:+--data "$3"} | python3 -c 'import sys,json
 d=json.load(sys.stdin)
-if not d.get("success"): sys.exit("API error on '"$1 $2"': %s" % d.get("errors"))
+if not d.get("success"):
+    errs = d.get("errors") or []
+    msg = "API error on '"$1 $2"': %s" % "; ".join("%s (code %s)" % (e.get("message"), e.get("code")) for e in errs)
+    if any(e.get("code") in (9109, 10000) for e in errs):
+        msg += ("\n  Cloudflare rejected the token for this call. In the token settings check that:"
+                "\n  - the permissions match docs/content/cloudflare/api-token.md,"
+                "\n  - Account Resources include this account and Zone Resources include '"$ZONE_NAME"',"
+                "\n  - the Client IP Address Filtering, if set, allows this server.")
+    sys.exit(msg)
 print(json.dumps(d.get("result")))'
 }
-jq_() { python3 -c "import sys,json; r=json.load(sys.stdin); print($1)"; }
+# Reads JSON from stdin as r and prints a Python expression. Empty input means an earlier step already failed.
+jq_() { python3 -c "import sys,json
+s=sys.stdin.read()
+if not s.strip(): sys.exit(1)
+r=json.loads(s); print($1)"; }
+
+# Check the token before using it: a wrong start date or an expired token looks like a permissions problem otherwise.
+curl -sS -H @<(printf 'Authorization: Bearer %s\n' "$TOKEN") "$API/user/tokens/verify" | python3 -c 'import sys,json,datetime
+d=json.load(sys.stdin)
+if not d.get("success"): sys.exit("Cloudflare does not accept this token: %s" % d.get("errors"))
+r=d.get("result") or {}
+now=datetime.datetime.now(datetime.timezone.utc)
+parse=lambda s: datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+nb=r.get("not_before"); ex=r.get("expires_on")
+if nb and parse(nb) > now:
+    sys.exit("The token is not valid yet. Its start date is %s UTC and it is now %s UTC.\n"
+             "  Edit the token at https://dash.cloudflare.com/profile/api-tokens and set the TTL start date to today, or create a new one." % (nb, now.strftime("%Y-%m-%dT%H:%M:%SZ")))
+if ex and parse(ex) < now: sys.exit("The token expired on %s UTC. Create a new one." % ex)
+if r.get("status") != "active": sys.exit("The token is %s. Create a new one." % r.get("status"))'
 
 ZONE_ID="$(cf GET "/zones?name=$ZONE_NAME" | jq_ 'r[0]["id"] if r else ""')"
 [ -n "$ZONE_ID" ] || { echo "Zone $ZONE_NAME not found for this token (set ZONE_NAME=yourdomain.com if the guess is wrong)"; exit 1; }

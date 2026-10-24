@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **One command to add or remove a person**: `scripts/people.sh add carol@example.com carol` updates
+  `IDENTITIES`, the Access policy and the running app. It offers to switch to the multi-user install when the
+  Linux user isn't your own. `remove` locks someone out without a token. `list` shows who may log in.
+- **Clearer failures when adding people.** `cloudflare.sh` verifies the API token first and says when its
+  start date is in the future, when it expired, or when its scope is wrong, instead of a traceback. The app
+  refuses to start when `IDENTITIES` names a Linux user it can't serve without root, and `install.sh` offers
+  the multi-user install in that case. A rejected person now sees a page that says what to ask the admin for.
 - **Smaller API token**: *Access: Organizations, Identity Providers, and Groups* needs only **Read** (Edit
   just to create the Cloudflare login method the first time). The token is never saved:
   `install.sh` and `cloudflare.sh` ask for it when they need it and keep it in memory for that run. The

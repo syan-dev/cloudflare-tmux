@@ -14,18 +14,19 @@ journalctl --user -u cloudflare-tmux-cloudflared -n 50 --no-pager
 
 In the multi-user install, the first one is `sudo journalctl -u cloudflare-tmux -n 50 --no-pager`.
 
-## Browser shows "Unauthorized" (401)
+## Browser shows "Not signed in" or "Unauthorized" (401)
 
-The app rejected the login. The log line `auth rejected ...: <reason>` says why:
+The app rejected the login. The page tells the person what to ask you for. The log line
+`auth rejected ...: <reason>` has the details:
 
 | Reason in log | Fix |
 |---|---|
 | `missing Access token` | The request didn't come through Access. Check that the Access application covers exactly this hostname. |
-| `email not mapped: x@y` | Add `x@y:user` to `IDENTITIES`, then re-run `cloudflare.sh` and `setup.sh`. |
+| `email not mapped: x@y` | `scripts/people.sh add x@y user`. See [Cloudflare login](cloudflare/cloudflare-login.md#add-a-person). |
 | `unexpected "aud" claim value` | `CF_ACCESS_AUD` in the config file doesn't match the Access application. Re-run `scripts/cloudflare.sh <host>` and restart. |
 | `unexpected "iss" claim value` | `CF_TEAM_DOMAIN` is wrong. Did you rename your team? Re-run `cloudflare.sh`. |
 | `Linux user u does not exist` | Create the user, or fix the mapping. |
-| `mapped to u, but the server runs as me` | The single-user install serves only your own user. Use `--multi-user`. |
+| `mapped to u, but the server runs as me` | The single-user install serves only your own user. Use the [multi-user install](install/multi-user.md). |
 | `has no login shell` | `sudo chsh -s /bin/bash u` |
 
 ## Cloudflare's "Access denied" page
@@ -67,6 +68,25 @@ Test locally on the server:
 curl -i http://127.0.0.1:7681/      # expect 401 Unauthorized: the app is up, it just wants a login
 ```
 
+## `cloudflare.sh` says "Invalid access token" or "The token is not valid yet"
+
+Cloudflare rejected the API token. The script now checks the token first and names the cause when it can.
+
+- **Start date in the future.** The TTL start date was set to tomorrow. Edit the token and set it to today, or
+  create a new one. Cloudflare's own verify endpoint still reports such a token as active, so this is easy to miss.
+- **Expired.** Create a new one.
+- **Wrong scope.** Open the token and check that Account Resources include your account, Zone Resources
+  include your zone, the permissions match the [API token](cloudflare/api-token.md#create-it) page, and no
+  Client IP filter excludes your server.
+- **"Authentication error" on one call.** The token is missing one permission. The failing call, for example
+  `GET /accounts/.../access/apps`, tells you which one.
+
+## App won't start: "IDENTITIES maps x to Linux user 'u', but this server runs as 'me'"
+
+The single-user install runs the app as you and can only start tmux as you. Either map everyone to your own
+user, or switch to the [multi-user install](install/multi-user.md). `scripts/people.sh add` offers the switch
+when it's needed.
+
 ## App won't start: "Set CF_TEAM_DOMAIN, CF_ACCESS_AUD and IDENTITIES"
 
 The config file is missing values. Run `scripts/cloudflare.sh <host>`, which fills in the first two. In the
@@ -91,11 +111,6 @@ sudo dnf install -y gcc-c++ make python3            # Fedora/RHEL
 Your token has **Read** on *Access: Organizations, Identity Providers, and Groups*, which is enough except the
 first time. Add the login method once in the dashboard, or give the token Edit for one run. See
 [If the login method is missing](cloudflare/api-token.md#if-the-login-method-is-missing).
-
-## `cloudflare.sh`: "API error ... Authentication error"
-
-The token is missing a permission. Compare it with [API token](cloudflare/api-token.md#create-it). The failing
-call, for example `GET /accounts/.../access/apps`, tells you which permission is missing.
 
 ## Terminal connects then immediately says "disconnected"
 

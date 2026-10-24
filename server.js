@@ -45,6 +45,15 @@ for (const entry of (process.env.IDENTITIES || '').split(',').map((x) => x.trim(
   if (IDENTITIES.has(email)) fail(`${email} is mapped twice in IDENTITIES.`);
   IDENTITIES.set(email, user);
 }
+// Without root the server can only act as itself. Refuse a config it could never serve instead of
+// rejecting that person at login time, where the cause is much harder to see.
+if (!IS_ROOT && !AUTH_DISABLED) {
+  const me = os.userInfo().username;
+  for (const [email, user] of IDENTITIES) {
+    if (user !== me) fail(`IDENTITIES maps ${email} to Linux user '${user}', but this server runs as '${me}' and can only serve '${me}'.\n` +
+      `Use the multi-user install: sudo NODE_BIN="$(command -v node)" scripts/install-system.sh (see docs/content/install/multi-user.md), or map ${email} to ${me}.`);
+  }
+}
 
 if (IS_ROOT && AUTH_DISABLED) fail('AUTH_DISABLED is for local dev and refused when running as root.');
 if (!AUTH_DISABLED && (!TEAM_DOMAIN || !ACCESS_AUD || IDENTITIES.size === 0)) {
@@ -119,15 +128,40 @@ async function authenticate(req) {
   });
   const email = String(payload.email || '').toLowerCase();
   const user = IDENTITIES.get(email);
-  if (!user) throw new Error(`email not mapped: ${email}`);
+  if (!user) throw mappingError(`email not mapped: ${email}`,
+    `You signed in to Cloudflare as ${email}, but that account isn't on this server's list of people who may log in.`,
+    `Ask the admin to run: scripts/people.sh add ${email} <linux-user>`);
   const account = await lookupUser(user);
-  if (!account) throw new Error(`${email}: Linux user ${user} does not exist`);
-  if (account.uid === 0) throw new Error(`${email}: refusing uid 0`);
-  if (/(nologin|false)$/.test(account.shell)) throw new Error(`${email}: ${user} has no login shell`);
+  if (!account) throw mappingError(`${email}: Linux user ${user} does not exist`,
+    `${email} is mapped to the Linux user ${user}, which doesn't exist on this server.`, 'Ask the admin to create it or fix the mapping.');
+  if (account.uid === 0) throw mappingError(`${email}: refusing uid 0`, `${email} is mapped to a root account, which is refused.`, 'Ask the admin to fix the mapping.');
+  if (/(nologin|false)$/.test(account.shell)) throw mappingError(`${email}: ${user} has no login shell`,
+    `${email} is mapped to the Linux user ${user}, which has no login shell.`, `Ask the admin to run: sudo chsh -s /bin/bash ${user}`);
   if (!IS_ROOT && account.uid !== process.getuid()) {
-    throw new Error(`${email}: mapped to ${user}, but the server runs as ${os.userInfo().username} (install as root for other users)`);
+    throw mappingError(`${email}: mapped to ${user}, but the server runs as ${os.userInfo().username} (install as root for other users)`,
+      `${email} is mapped to the Linux user ${user}, but this server can only serve ${os.userInfo().username}.`, 'Ask the admin to use the multi-user install.');
   }
   return { email, account };
+}
+
+// A login rejected because of the IDENTITIES mapping. The person sees `shown` and `hint`; the log gets `message`.
+// Other failures (missing or invalid Access token) stay generic for the person.
+function mappingError(message, shown, hint) {
+  const err = new Error(message);
+  err.shown = shown;
+  err.hint = hint;
+  return err;
+}
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function rejectionPage(err) {
+  const shown = err.shown || 'Your Cloudflare login was not accepted by this server.';
+  const hint = err.hint || 'Ask the admin to check the server log, which names the reason.';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Not signed in</title><style>body{font:16px/1.5 system-ui,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;display:grid;place-items:center;min-height:100vh}
+main{max-width:34rem;padding:2rem}h1{font-size:1.25rem;margin:0 0 .75rem}p{margin:.5rem 0}code{background:#1e293b;padding:.1rem .35rem;border-radius:.25rem}
+a{color:#7dd3fc}</style></head><body><main><h1>Not signed in</h1><p>${esc(shown)}</p><p>${esc(hint)}</p>
+<p><a href="/">Try again</a></p></main></body></html>`;
 }
 
 // ---------- second step: authenticator code ----------
@@ -235,7 +269,8 @@ app.use(async (req, res, next) => {
     next();
   } catch (err) {
     console.warn(`auth rejected ${req.method} ${req.path}: ${err.message}`);
-    res.status(401).send('Unauthorized');
+    if (!req.path.startsWith('/api/') && req.accepts(['json', 'html']) === 'html') res.status(401).type('html').send(rejectionPage(err));
+    else res.status(401).send('Unauthorized');
   }
 });
 

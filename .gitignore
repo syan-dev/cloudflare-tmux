@@ -2,3 +2,4 @@ node_modules/
 .env
 docs/node_modules/
 docs/dist/
+.env.api_token

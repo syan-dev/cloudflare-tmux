@@ -28,7 +28,8 @@ Keep the token small:
 - **Account Resources**: include only the account that owns the zone.
 - **Zone Resources**: include only the zone you're using, so the token can't touch your other domains.
 - **Client IP Address Filtering**, optional: only your server's public IP.
-- **TTL**: a day or so. You need the token only while the script runs.
+- **TTL**: a day or so. You need the token only while the script runs. Set the **start date to today**. A
+  start date of tomorrow makes every call fail with "Invalid access token".
 
 > [!CAUTION]
 > Anyone with this token can change your tunnels and Access policies, and so could open your terminal to
@@ -41,14 +42,14 @@ Only when you **change something on Cloudflare**. Everything else runs on your s
 **Needs a token**
 
 - the first install, and any re-run of `./install.sh`
-- adding a person
+- adding a person with `scripts/people.sh add`
 - changing the hostname, `PORT`, `TUNNEL_NAME` or `ACCESS_SESSION`
 - replacing a leaked tunnel token
 - tidying the Access policy after removing a person
 
 **Never needs a token**
 
-- locking someone out: remove them from `IDENTITIES` and restart the app
+- locking someone out: `scripts/people.sh remove their@email`
 - mapping an already-listed email to a different Linux user
 - the two-step code: turning it on, enrolling or removing a phone
 - updating the app or `cloudflared`
@@ -91,6 +92,12 @@ For unattended runs, pass it as `CF_API_TOKEN` from your secret store:
 ```bash
 CF_API_TOKEN=... ./install.sh --yes --host term.example.com --identities you@example.com:$USER
 ```
+
+## If the token is refused
+
+`cloudflare.sh` verifies the token before using it. If Cloudflare rejects it, the script says why when it can:
+a start date in the future, an expired token, or a scope that doesn't cover the account or zone. See
+[Troubleshooting](../troubleshooting.md#cloudflaresh-says-invalid-access-token-or-the-token-is-not-valid-yet).
 
 ## Check the token
 

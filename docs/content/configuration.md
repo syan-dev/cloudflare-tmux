@@ -44,9 +44,18 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 
 ## Setup scripts
 
+| Script | What it does |
+|---|---|
+| `install.sh` | The whole setup. Safe to re-run. |
+| `scripts/people.sh add\|remove\|list` | Add or remove a person, or list who may log in. `add` runs the two scripts below for you. |
+| `scripts/cloudflare.sh <host>` | Creates or updates everything on Cloudflare from the config. Needs an API token. |
+| `scripts/setup.sh` | Installs or restarts the user services. Single-user install. |
+| `scripts/install-system.sh` | Installs or restarts the root app service. Multi-user install. Run with `sudo`. |
+| `scripts/totp.js` | Enrolls or removes authenticators for the [two-step code](two-step.md). |
+
 | Variable | Used by | Description |
 |---|---|---|
-| `CF_API_TOKEN` | `cloudflare.sh`, `install.sh` | The [API token](cloudflare/api-token.md). If unset, the scripts ask for it. Never saved. Set it only for unattended runs. |
+| `CF_API_TOKEN` | `cloudflare.sh`, `install.sh`, `people.sh` | The [API token](cloudflare/api-token.md). If unset, the scripts ask for it. Never saved. Set it only for unattended runs. |
 | `ZONE_NAME` | `cloudflare.sh` | Zone that holds the hostname. Defaults to the hostname minus its first label. |
 | `TUNNEL_NAME` | `cloudflare.sh` | Tunnel name. Defaults to the saved one, else `cloudflare-tmux`. Use a different name per machine. |
 | `PORT` | `cloudflare.sh` | Local port for the tunnel and the config. Default `7681`. |

@@ -63,9 +63,13 @@ If your `cloudflared` comes from a package manager, update it there instead and 
 
 ## Add or remove a person
 
-See [Cloudflare login](cloudflare/cloudflare-login.md). In short: adding someone needs a short-lived API
-token, because it changes the Access policy. Locking someone out doesn't: remove them from `IDENTITIES` and
-restart the app.
+```bash
+scripts/people.sh add carol@example.com carol     # asks for a short-lived API token
+scripts/people.sh remove carol@example.com        # no token needed
+scripts/people.sh list
+```
+
+See [Cloudflare login](cloudflare/cloudflare-login.md) for inviting them as a member first.
 
 ## Uninstall
 

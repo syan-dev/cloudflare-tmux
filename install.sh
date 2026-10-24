@@ -11,7 +11,7 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=scripts/config.sh
 . "$APP_DIR/scripts/config.sh"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
-dl="" token=""
+dl="" token="" use_multi=""
 
 usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 while [ $# -gt 0 ]; do
@@ -88,16 +88,30 @@ if [ -z "$IDENTITIES" ]; then
   ask IDENTITIES "Who may log in? cloudflare-account-email:linux-user[,more...]" "$default_ids"
 fi
 [ -n "$IDENTITIES" ] || { echo "IDENTITIES is required"; exit 1; }
+
+# Validate before saving, so a typo never ends up in the config.
+IFS=',' read -ra entries <<< "$IDENTITIES"
+for e in "${entries[@]}"; do
+  u="${e##*:}"
+  [[ "$e" == *@*:?* ]] || { echo "  Bad entry '$e': expected email:linuxuser"; exit 1; }
+  [ "$u" != root ] || { echo "  root may not be mapped."; exit 1; }
+  getent passwd "$u" >/dev/null || { echo "  Linux user '$u' does not exist. Create it first: sudo adduser $u"; exit 1; }
+done
+if [ "$MULTI_USER" -eq 0 ]; then
+  # The single-user app runs as you and can only serve you. Catch other mappings here, not at login time.
+  others=()
+  for e in "${entries[@]}"; do u="${e##*:}"; [ "$u" = "$USER" ] || others+=("${e%%:*} -> $u"); done
+  if [ ${#others[@]} -gt 0 ]; then
+    echo "  These people map to a Linux user other than '$USER': ${others[*]}"
+    echo "  That needs the multi-user install: the app runs as a root service and starts tmux as each mapped user."
+    if [ "$YES" -eq 1 ]; then echo "  Add --multi-user, or map everyone to $USER."; exit 1; fi
+    ask use_multi "Use the multi-user install? It needs sudo. (y/n)" y
+    [ "$use_multi" = y ] || { echo "Map everyone to $USER, or re-run with --multi-user."; exit 1; }
+    MULTI_USER=1
+  fi
+fi
 env_set IDENTITIES "$IDENTITIES"
 ok "IDENTITIES=$IDENTITIES"
-
-if [ "$MULTI_USER" -eq 0 ]; then
-  IFS=',' read -ra entries <<< "$IDENTITIES"
-  for e in "${entries[@]}"; do
-    u="${e##*:}"
-    [ "$u" = "$USER" ] || echo "  note: ${e%%:*} maps to '$u', not '$USER' — that needs --multi-user."
-  done
-fi
 
 if [ -n "${CF_API_TOKEN:-}" ]; then
   ok "API token from \$CF_API_TOKEN"
@@ -137,6 +151,7 @@ fi
 echo
 bold "Done. Open https://$HOST"
 echo "  Then delete the API token at https://dash.cloudflare.com/profile/api-tokens; nothing running uses it."
+echo "  Add people later with one command: scripts/people.sh add their@email.com [linux-user]"
 if [ "$MULTI_USER" -eq 1 ]; then
   echo "  Status: systemctl status cloudflare-tmux; systemctl --user status cloudflare-tmux-cloudflared"
   echo "  Logs:   journalctl -u cloudflare-tmux -f"
