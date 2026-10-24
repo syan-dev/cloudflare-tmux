@@ -19,6 +19,8 @@ You sign in with your Cloudflare account. Your programs keep running when you cl
 - **Works on phones.** A key bar adds Esc, Tab, Ctrl, arrows and the tmux prefix on touch screens.
 - **One command for everything.** `./install.sh` sets it up. `cloudflare-tmux` runs it day to day.
 
+![The file panel: browse folders, download, upload by drag and drop, or paste a screenshot](assets/img/files.png)
+
 ## How it works
 
 ```text
