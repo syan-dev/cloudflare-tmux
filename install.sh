@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# One-command setup for cloudflare-tmux: checks prerequisites, asks for what it needs,
-# provisions Cloudflare (scripts/cloudflare.sh) and installs the services (scripts/setup.sh,
-# or scripts/install-system.sh with --multi-user). Safe to re-run.
+# The one command for cloudflare-tmux. Safe to re-run.
 #
-# Usage: ./install.sh [--host term.example.com] [--identities you@gmail.com:you,...]
-#                     [--multi-user] [--yes]
+# Usage: ./install.sh [--host term.example.com] [--identities you@gmail.com:you,...] [--multi-user] [--yes]
+#        ./install.sh add <cloudflare-email> [linux-user]    let someone log in
+#        ./install.sh remove <cloudflare-email>              lock someone out
+#        ./install.sh list                                   who may log in
+#
+# Setup checks prerequisites, asks for what it needs, provisions Cloudflare (scripts/cloudflare.sh) and
+# installs the services (scripts/setup.sh, or scripts/install-system.sh when people map to other Linux users).
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -13,7 +16,8 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOST_ARG="" IDENTITIES_ARG="" MULTI_USER=0 YES=0
 dl="" token="" use_multi=""
 
-usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+case "${1:-}" in add|remove|list) exec "$APP_DIR/scripts/people.sh" "$@" ;; esac
 while [ $# -gt 0 ]; do
   case "$1" in
     --host) HOST_ARG="${2:?--host needs a value}"; shift 2 ;;
@@ -151,7 +155,7 @@ fi
 echo
 bold "Done. Open https://$HOST"
 echo "  Then delete the API token at https://dash.cloudflare.com/profile/api-tokens; nothing running uses it."
-echo "  Add people later with one command: scripts/people.sh add their@email.com [linux-user]"
+echo "  Add people later with one command: ./install.sh add their@email.com [linux-user]"
 if [ "$MULTI_USER" -eq 1 ]; then
   echo "  Status: systemctl status cloudflare-tmux; systemctl --user status cloudflare-tmux-cloudflared"
   echo "  Logs:   journalctl -u cloudflare-tmux -f"

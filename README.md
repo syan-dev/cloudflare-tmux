@@ -61,10 +61,10 @@ and go through the [security checklist](https://syan-dev.github.io/cloudflare-tm
 To let more people in, invite them as members of your Cloudflare account and run one command:
 
 ```bash
-scripts/people.sh add carol@example.com carol
+./install.sh add carol@example.com carol
 ```
 
-See [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html).
+See [Add a person](https://syan-dev.github.io/cloudflare-tmux/add-a-person.html).
 
 Without prompts, for scripts:
 
@@ -72,8 +72,8 @@ Without prompts, for scripts:
 CF_API_TOKEN=... ./install.sh --yes --host term.example.com --identities you@example.com:$USER
 ```
 
-Several people, each with their own Linux user: add `--multi-user`.
-See [Multi-user install](https://syan-dev.github.io/cloudflare-tmux/install/multi-user.html).
+If someone gets a Linux user other than yours, the installer asks once and runs the app as a root service
+so it can start a shell as that user. See [Multi-user install](https://syan-dev.github.io/cloudflare-tmux/install/multi-user.html).
 
 ## Documentation
 
@@ -83,7 +83,8 @@ Full docs: **https://syan-dev.github.io/cloudflare-tmux/**
 |---|---|
 | [Prerequisites](https://syan-dev.github.io/cloudflare-tmux/prerequisites.html) | what you need first |
 | [Quickstart](https://syan-dev.github.io/cloudflare-tmux/quickstart.html) | install in five minutes |
-| [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html) | add and remove people |
+| [Add a person](https://syan-dev.github.io/cloudflare-tmux/add-a-person.html) | let someone else log in |
+| [Cloudflare login](https://syan-dev.github.io/cloudflare-tmux/cloudflare/cloudflare-login.html) | how the login method works |
 | [API token](https://syan-dev.github.io/cloudflare-tmux/cloudflare/api-token.html) | permissions, when you need it |
 | [What gets created](https://syan-dev.github.io/cloudflare-tmux/cloudflare/what-gets-created.html) | every Cloudflare object |
 | [Configuration](https://syan-dev.github.io/cloudflare-tmux/configuration.html) | variables, flags, files |

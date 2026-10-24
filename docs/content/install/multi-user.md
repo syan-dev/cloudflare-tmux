@@ -5,16 +5,21 @@ description: Serve several people from one machine, each Cloudflare account mapp
 
 # Multi-user install
 
-Use this when several people share a machine and each should get **their own Linux user**: their own files,
-permissions and tmux sessions.
+You don't choose this up front. When someone maps to a Linux user other than your own, `./install.sh` and
+`./install.sh add` explain that the app must run as root to start a shell as that user, ask once, and switch.
+This page describes what the switch does.
+
+Use it when several people share a machine and each should get **their own Linux user**: their own files,
+permissions and tmux sessions. Each Linux user must already exist and have a login shell. Create one with
+`sudo adduser alice`.
+
+To ask for it explicitly, for example in a script:
 
 ```bash
 ./install.sh --multi-user \
   --host term.example.com \
   --identities alice@example.com:alice,bob@example.com:bob
 ```
-
-Each Linux user must already exist and have a login shell. Create one with `sudo adduser alice`.
 
 ## How it works
 
@@ -54,8 +59,8 @@ multi-user install and re-runs `install-system.sh` for you, which asks for `sudo
 
 ```bash
 sudo adduser carol
-scripts/people.sh add carol@example.com carol
-scripts/people.sh remove carol@example.com
+./install.sh add carol@example.com carol
+./install.sh remove carol@example.com
 ```
 
 See [Cloudflare login](../cloudflare/cloudflare-login.md) for the Cloudflare side: inviting them as a member
@@ -64,5 +69,5 @@ and the API token.
 ## Switching from the single-user install
 
 You don't have to decide up front. When you add someone with a Linux user other than your own,
-`scripts/people.sh add` offers to switch. `./install.sh` does the same when `IDENTITIES` names other users.
+`./install.sh add` offers to switch. `./install.sh` does the same when `IDENTITIES` names other users.
 Your sessions and config stay as they are. Only the app service moves from your user to root.

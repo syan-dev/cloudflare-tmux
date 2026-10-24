@@ -2,10 +2,10 @@
 # Add, remove or list the people who may log in. One command does the whole job: it updates IDENTITIES
 # in the config, updates the Access policy on Cloudflare and restarts the app the right way for your install.
 #
-# Usage:
-#   scripts/people.sh add <cloudflare-email> [linux-user]   default linux-user: you
-#   scripts/people.sh remove <cloudflare-email>
-#   scripts/people.sh list
+# Usage (./install.sh add|remove|list runs this script):
+#   ./install.sh add <cloudflare-email> [linux-user]   default linux-user: you
+#   ./install.sh remove <cloudflare-email>
+#   ./install.sh list
 #   Options: --yes (no questions; refuses instead of asking)
 #
 # add needs a Cloudflare API token: asked for, or $CF_API_TOKEN; never saved. remove and list don't.
@@ -48,7 +48,7 @@ list)
 add)
   EMAIL="$(echo "${ARGS[1]:-}" | tr '[:upper:]' '[:lower:]')"
   LINUX_USER="${ARGS[2]:-$USER}"
-  [[ "$EMAIL" == *@*.* ]] || die "usage: $0 add <cloudflare-email> [linux-user]"
+  [[ "$EMAIL" == *@*.* ]] || die "usage: ./install.sh add <cloudflare-email> [linux-user]"
   [[ "$LINUX_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "Bad Linux user name: $LINUX_USER"
   [ "$LINUX_USER" != root ] || die "root may not be mapped."
   ENTRY="$(getent passwd "$LINUX_USER" || true)"
@@ -115,7 +115,7 @@ add)
 
 remove)
   EMAIL="$(echo "${ARGS[1]:-}" | tr '[:upper:]' '[:lower:]')"
-  [[ "$EMAIL" == *@* ]] || die "usage: $0 remove <cloudflare-email>"
+  [[ "$EMAIL" == *@* ]] || die "usage: ./install.sh remove <cloudflare-email>"
   identities | awk -F: '{ sub(/:[^:]*$/, ""); print tolower($0) }' | grep -qxF "$EMAIL" || die "$EMAIL is not in IDENTITIES."
   NEW="$(without "$EMAIL")"
   [ -n "$NEW" ] || die "Refusing to remove the last person. The app needs at least one."

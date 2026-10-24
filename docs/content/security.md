@@ -157,7 +157,7 @@ These change Cloudflare, so they need a token or the dashboard.
 If you think a person's Cloudflare account, a device or the API token is compromised, do these in order. The
 first three need **no API token**, so you can act right away.
 
-1. **Lock them out of the app.** Run `scripts/people.sh remove their@email`. It removes them from
+1. **Lock them out of the app.** Run `./install.sh remove their@email`. It removes them from
    `IDENTITIES` and restarts the app. The app refuses them immediately, even with a valid Cloudflare login,
    and the restart drops any open terminal.
 2. **End what they left running.** Their tmux sessions survive the lockout. As that Linux user, check

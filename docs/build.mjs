@@ -17,7 +17,7 @@ const REPO = 'https://github.com/syan-dev/cloudflare-tmux';
 const SITE = 'cloudflare-tmux';
 
 const NAV = [
-  { section: 'Getting started', pages: ['index', 'prerequisites', 'quickstart'] },
+  { section: 'Getting started', pages: ['index', 'prerequisites', 'quickstart', 'add-a-person'] },
   { section: 'Cloudflare', pages: ['cloudflare/cloudflare-login', 'cloudflare/api-token', 'cloudflare/what-gets-created'] },
   { section: 'Install', pages: ['install/single-user', 'install/multi-user'] },
   { section: 'Guides', pages: ['configuration', 'usage', 'security', 'two-step', 'operations', 'troubleshooting', 'development'] },

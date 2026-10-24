@@ -64,9 +64,9 @@ If your `cloudflared` comes from a package manager, update it there instead and 
 ## Add or remove a person
 
 ```bash
-scripts/people.sh add carol@example.com carol     # asks for a short-lived API token
-scripts/people.sh remove carol@example.com        # no token needed
-scripts/people.sh list
+./install.sh add carol@example.com carol     # asks for a short-lived API token
+./install.sh remove carol@example.com        # no token needed
+./install.sh list
 ```
 
 See [Cloudflare login](cloudflare/cloudflare-login.md) for inviting them as a member first.

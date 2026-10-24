@@ -15,7 +15,7 @@ It's a small Node.js app in front of tmux, reachable through a Cloudflare Tunnel
   your programs carry on.
 - **The same sessions on the server.** `tmux ls` and `tmux attach` show what you see in the browser.
 - **Built for phones.** A key bar adds Esc, Tab, Ctrl, the tmux prefix and arrow keys on touch screens.
-- **Multi-user.** Each Cloudflare account maps to one Linux user. Terminals run as that user, never as root.
+- **Add people with one command.** Each Cloudflare account maps to one Linux user. Terminals run as that user, never as root.
 - **One command to set up.** `./install.sh` creates everything on Cloudflare and installs services that start on boot.
 
 ![A tmux session open in the browser](assets/img/terminal.png)
@@ -54,5 +54,6 @@ The [security model](security.md) describes each check in detail.
 > Most people are up and running in about five minutes with the [Quickstart](quickstart.md).
 
 - [Prerequisites](prerequisites.md): what you need before you start.
+- [Add a person](add-a-person.md): let someone else log in.
 - [Security model](security.md): why it's safe to put a shell behind a URL.
 - [What gets created in Cloudflare](cloudflare/what-gets-created.md): every object the installer touches.

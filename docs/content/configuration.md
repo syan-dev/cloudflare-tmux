@@ -46,8 +46,8 @@ IDENTITIES=alice@example.com:alice,bob@example.com:bob
 
 | Script | What it does |
 |---|---|
-| `install.sh` | The whole setup. Safe to re-run. |
-| `scripts/people.sh add\|remove\|list` | Add or remove a person, or list who may log in. `add` runs the two scripts below for you. |
+| `./install.sh` | The whole setup. Safe to re-run. |
+| `./install.sh add\|remove\|list` | Add or remove a person, or list who may log in. Implemented in `scripts/people.sh`. |
 | `scripts/cloudflare.sh <host>` | Creates or updates everything on Cloudflare from the config. Needs an API token. |
 | `scripts/setup.sh` | Installs or restarts the user services. Single-user install. |
 | `scripts/install-system.sh` | Installs or restarts the root app service. Multi-user install. Run with `sudo`. |
