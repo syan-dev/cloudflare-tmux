@@ -315,14 +315,15 @@ function renderPath() {
   root.onclick = () => loadFiles(inHome ? home : '/');
   el.append(root);
   let acc = base;
-  for (const seg of rest.split('/').filter(Boolean)) {
+  rest.split('/').filter(Boolean).forEach((seg, i) => {
     acc += '/' + seg;
     const target = acc;
     const span = document.createElement('span');
     span.textContent = seg;
     span.onclick = () => loadFiles(target);
-    el.append('/', span);
-  }
+    if (inHome || i > 0) el.append('/');
+    el.append(span);
+  });
   el.title = files.dir;
 }
 

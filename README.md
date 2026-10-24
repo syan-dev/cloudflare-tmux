@@ -75,7 +75,7 @@ Full docs: **https://syan-dev.github.io/cloudflare-tmux/**
 | [Before you start](https://syan-dev.github.io/cloudflare-tmux/prerequisites.html) | the three things you need |
 | [Install](https://syan-dev.github.io/cloudflare-tmux/quickstart.html) | five minutes, one command |
 | [Add a person](https://syan-dev.github.io/cloudflare-tmux/add-a-person.html) | let someone else log in |
-| [Using it](https://syan-dev.github.io/cloudflare-tmux/usage.html) | the dashboard, the terminal, your phone |
+| [Using it](https://syan-dev.github.io/cloudflare-tmux/usage.html) | the dashboard, the terminal, files, your phone |
 | [Troubleshooting](https://syan-dev.github.io/cloudflare-tmux/troubleshooting.html) | `cloudflare-tmux doctor`, errors and fixes |
 
 Reference: [maintenance](https://syan-dev.github.io/cloudflare-tmux/operations.html),

@@ -44,6 +44,8 @@ goes one way: nothing in the terminal can read your clipboard. This needs tmux 3
 
 Press **Files** in the terminal bar to open the file panel. It shows your home folder.
 
+![The file panel next to a terminal, after pasting a screenshot](assets/img/files.png)
+
 - **Open a folder**: click its name. **↑** goes up one level, **~** returns home. Dotfiles are hidden until
   you press **.\***.
 - **Download**: click a file's name.
