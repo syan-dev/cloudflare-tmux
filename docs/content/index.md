@@ -15,11 +15,11 @@ You sign in with your Cloudflare account. Your programs keep running when you cl
 - **No open ports.** Your server connects out to Cloudflare. No port forwarding, public IP or firewall rules.
 - **Sign in with Cloudflare.** A login page stands in front. Only the people you list get through.
 - **Sessions survive.** Every terminal is a real tmux session. Lose Wi-Fi, switch devices, come back later.
-- **Files too.** Browse folders, download a file, drag files in, or paste a screenshot into the terminal.
+- **Files too.** Browse folders, download a file, drop files or folders in. Paste a screenshot and its path is typed for you.
 - **Works on phones.** A key bar adds Esc, Tab, Ctrl, arrows and the tmux prefix on touch screens.
 - **One command for everything.** `./install.sh` sets it up. `cloudflare-tmux` runs it day to day.
 
-![The file panel: browse folders, download, upload by drag and drop, or paste a screenshot](assets/img/files.png)
+![The Explorer beside the terminal: browse folders, download, upload by drag and drop, or paste a screenshot](assets/img/files.png)
 
 ## How it works
 

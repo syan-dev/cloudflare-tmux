@@ -7,6 +7,21 @@
   save it as a file. A *path* button types a file's path into the terminal. Everything runs as the mapped
   Linux user through `setpriv`, uploads are capped by `MAX_UPLOAD_MB` (100 MB, Cloudflare's free-plan limit)
   and never replace a file without asking.
+- **Uploads work like VS Code.** A pasted image or a file dropped on the terminal is saved and its path is
+  typed into the terminal. Pasting works anywhere on the page, not only with the terminal focused. A drop on
+  the panel uploads into the folder under the pointer, folders upload with their structure, and the panel
+  opens in the folder the terminal is in, with a *⌖* button to get back there. Duplicates offer *Replace*,
+  *Keep both* or *Skip*. The progress message shows a thumbnail and can cancel. New *Paste* and *+ Folder*
+  buttons read the clipboard directly and create folders, and a panel row can be dragged onto the terminal
+  to type its path.
+- **The terminal page looks like VS Code in the browser**: a title bar with the session in the middle, an icon
+  bar on the left, an Explorer tree with folders that expand in place and file-type icons, the terminal as an
+  editor tab, a status bar, and VS Code's dark colors in the terminal too. On a phone the Explorer covers the
+  terminal and menus slide up from the bottom.
+- **Rename, move and delete** in the file panel. Right-click a row or press *⋯* for a menu with *Download*,
+  *Insert path*, *Copy path*, *Rename*, *Move to…* and *Delete*. Rename is inline. Drag a row onto a folder,
+  a path crumb or *↑* to move it, with *Undo* in the corner. Delete asks in a dialog with Cancel selected, and
+  nothing ever replaces an existing file.
 - **The `cloudflare-tmux` command**, linked into `~/.local/bin` by the installer: `status` (is it online?),
   `people`, `add`, `remove`, `config`, `logs`, `restart` and `doctor`. One command to learn, whichever install
   you have. Output is colored on a terminal and plain when piped or with `NO_COLOR`.

@@ -66,6 +66,13 @@ HTTP API (all under Access):
 | POST | `/api/sessions` | `{ name }` | 201 |
 | POST | `/api/sessions/:name/rename` | `{ name }` | 200 |
 | DELETE | `/api/sessions/:name` | | 204 |
+| GET | `/api/sessions/:name/cwd` | | `{ path }`, the active pane's folder |
+| GET | `/api/files?path=` | | `{ home, path, entries: [{ name, type, size, mtime }] }` |
+| GET | `/api/files/download?path=` | | the file |
+| POST | `/api/files/upload?dir=&name=[&overwrite=1]` | the bytes | 201 `{ path, size }`, 409 if it exists |
+| POST | `/api/files/mkdir?path=` | | 201, parents included |
+| POST | `/api/files/rename?from=&to=` | | `{ path }`, 409 if `to` exists |
+| DELETE | `/api/files?path=` | | 204, folders recursively; home and `/` refused |
 
 ## Docs site
 

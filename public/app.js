@@ -48,10 +48,10 @@ function timeAgo(epochSec) {
 function renderMe() {
   const el = $('me');
   el.replaceChildren();
-  const u = document.createElement('span');
-  u.className = 'me-user';
+  const u = document.createElement('b');
   u.textContent = me.user;
   el.append(u, ` · ${me.email}`);
+  $('sb-user').textContent = `${me.user} · ${me.email}`;
 }
 
 // ---------- dashboard ----------
@@ -161,7 +161,12 @@ function ensureTerminal() {
     fontFamily: 'ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace',
     fontSize: window.matchMedia('(pointer: coarse)').matches ? 13 : 14,
     scrollback: 5000,
-    theme: { background: '#000000' },
+    // VS Code's Dark Modern terminal colors.
+    theme: {
+      background: '#1f1f1f', foreground: '#cccccc', cursor: '#cccccc', selectionBackground: '#264f78',
+      black: '#000000', red: '#cd3131', green: '#0dbc79', yellow: '#e5e510', blue: '#2472c8', magenta: '#bc3fbc', cyan: '#11a8cd', white: '#e5e5e5',
+      brightBlack: '#666666', brightRed: '#f14c4c', brightGreen: '#23d18b', brightYellow: '#f5f543', brightBlue: '#3b8eea', brightMagenta: '#d670d6', brightCyan: '#29b8db', brightWhite: '#e5e5e5',
+    },
   });
   fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
@@ -224,8 +229,10 @@ function openSession(name) {
   currentSession = name;
   document.title = `${name} · cloudflare-tmux`;
   $('term-name').textContent = name;
+  $('tab-name').textContent = `${name} · tmux`;
   ensureTerminal();
   term.reset();
+  files.dir = null; // the panel opens where this session's terminal is working
   showFiles(isWide() && store.get('files-open') === '1', false);
   connect(name);
 }
@@ -260,24 +267,51 @@ $('keys').addEventListener('click', (e) => {
 
 // ---------- files panel ----------
 
-// Browses the person's files, uploads by drop, paste or button, and downloads. Everything goes through
-// /api/files, which the server runs as the same Linux user as the terminal.
+// An explorer like VS Code's: a tree of the person's files, uploads and downloads. Everything goes through
+// /api/files, which the server runs as the same Linux user as the terminal. A drop or a pasted image on the
+// terminal uploads the file and types its path; a drop on the explorer only uploads, into the folder under the
+// pointer. Rows rename inline, move by drag, and have a context menu.
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
 };
-const files = { dir: null, home: null, hidden: store.get('files-hidden') === '1' };
+const files = { dir: null, home: null, hidden: store.get('files-hidden') === '1', open: new Set(), kids: new Map(), sel: null };
 const isWide = () => window.matchMedia('(min-width: 721px)').matches;
+const FILENAME_RE = /^[^/\0]{1,255}$/;
+const SVG = 'http://www.w3.org/2000/svg';
+
+// An <svg><use> of one of the icons defined in index.html.
+function icon(id, size = 16) {
+  const s = document.createElementNS(SVG, 'svg');
+  s.setAttribute('width', size);
+  s.setAttribute('height', size);
+  s.setAttribute('aria-hidden', 'true');
+  const u = document.createElementNS(SVG, 'use');
+  u.setAttribute('href', `#i-${id}`);
+  s.append(u);
+  return s;
+}
+
+function iconButton(id, title, fn) {
+  const b = document.createElement('button');
+  b.className = 'icon';
+  b.title = title;
+  b.setAttribute('aria-label', title);
+  b.append(icon(id));
+  b.onclick = (ev) => { ev.stopPropagation(); fn(b); };
+  return b;
+}
 
 function filesVisible() { return !$('files').hidden; }
 
 function showFiles(on, remember = true) {
   $('files').hidden = !on;
   $('files-btn').classList.toggle('active', on);
+  $('files-btn-m').classList.toggle('active', on);
   if (remember) store.set('files-open', on ? '1' : '0');
   if (fit && currentSession) fit.fit();
-  if (on && !files.dir) loadFiles();
+  if (on && !files.dir) loadTerminalDir();
 }
 
 function filesError(msg) {
@@ -285,14 +319,88 @@ function filesError(msg) {
   $('files-error').hidden = !msg;
 }
 
+const join = (dir, name) => dir.replace(/\/$/, '') + '/' + name;
+const parentOf = (p) => p.replace(/\/[^/]+\/?$/, '') || '/';
+
+// Lists one folder. Resolves its entries, or null after showing the error.
+async function listDir(dir) {
+  try { return (await api('GET', `/api/files?path=${encodeURIComponent(dir)}`)).entries; }
+  catch (err) { filesError(err.message); return null; }
+}
+
+// Makes `dir` the root of the tree, or home when null. Resolves true when it loaded.
 async function loadFiles(dir) {
   filesError('');
   let data;
   try { data = await api('GET', '/api/files' + (dir ? `?path=${encodeURIComponent(dir)}` : '')); }
-  catch (err) { return filesError(err.message); }
+  catch (err) { filesError(err.message); return false; }
   files.dir = data.path;
   files.home = data.home;
-  renderFiles(data.entries);
+  files.open = new Set();
+  files.kids = new Map([[data.path, data.entries]]);
+  files.sel = null;
+  renderFiles();
+  return true;
+}
+
+// Re-reads the root and every open folder, keeping the tree as it is.
+async function refreshFiles() {
+  if (!files.dir) return;
+  filesError('');
+  await Promise.all([files.dir, ...files.open].map(async (d) => {
+    const entries = await listDir(d);
+    if (entries) files.kids.set(d, entries);
+    else { files.open.delete(d); files.kids.delete(d); }
+  }));
+  renderFiles();
+}
+
+// Expands or collapses a folder in the tree, listing it the first time.
+async function toggleDir(dir, open = !files.open.has(dir)) {
+  if (!open) { files.open.delete(dir); renderFiles(); return; }
+  files.open.add(dir);
+  if (!files.kids.has(dir)) {
+    renderFiles();
+    const entries = await listDir(dir);
+    if (entries) files.kids.set(dir, entries);
+    else files.open.delete(dir);
+  }
+  renderFiles();
+}
+
+// Opens the folder the terminal is working in, like VS Code's explorer. Falls back to home.
+async function loadTerminalDir() {
+  let dir = null;
+  if (currentSession) {
+    try { dir = (await api('GET', `/api/sessions/${encodeURIComponent(currentSession)}/cwd`)).path; } catch { /* home */ }
+  }
+  if (!dir || !(await loadFiles(dir))) await loadFiles(null);
+}
+
+// Where a drop or paste on the terminal goes: the tree's root, loading it first if the panel was never opened.
+async function uploadDir() {
+  if (!files.dir) await loadTerminalDir();
+  return files.dir;
+}
+
+// Where a panel action works: the selected folder, the selected file's folder, or the root. As in VS Code.
+function contextDir() {
+  if (!files.sel) return files.dir;
+  return files.sel.type === 'dir' ? files.sel.path : parentOf(files.sel.path);
+}
+
+// "~/sub/dir" for paths under home.
+function prettyPath(p) {
+  const home = (files.home || '').replace(/\/$/, '');
+  return home && (p === home || p.startsWith(home + '/')) ? '~' + p.slice(home.length) : p;
+}
+
+// A typed path: absolute, ~-relative, or relative to the tree's root.
+function expandPath(typed) {
+  const t = typed.trim();
+  if (!t) return null;
+  const p = t.startsWith('/') ? t : t === '~' || t.startsWith('~/') ? files.home.replace(/\/$/, '') + t.slice(1) : join(files.dir, t);
+  return p.replace(/\/+$/, '') || '/';
 }
 
 function fmtSize(n) {
@@ -302,76 +410,163 @@ function fmtSize(n) {
   return `${(n / 1024 ** 3).toFixed(1)} G`;
 }
 
-// Shows "~/sub/dir" with each segment clickable.
+// The root's path as crumbs, each clickable and a drop target; the last one bold, as VS Code names its root.
 function renderPath() {
   const el = $('files-path');
   el.replaceChildren();
   const home = files.home.replace(/\/$/, '');
   const inHome = files.dir === home || files.dir.startsWith(home + '/');
-  const base = inHome ? home : '';
   const rest = inHome ? files.dir.slice(home.length) : files.dir;
-  const root = document.createElement('span');
-  root.textContent = inHome ? '~' : '/';
-  root.onclick = () => loadFiles(inHome ? home : '/');
-  el.append(root);
-  let acc = base;
-  rest.split('/').filter(Boolean).forEach((seg, i) => {
-    acc += '/' + seg;
-    const target = acc;
+  const segs = rest.split('/').filter(Boolean);
+  const crumb = (text, dir) => {
     const span = document.createElement('span');
-    span.textContent = seg;
-    span.onclick = () => loadFiles(target);
-    if (inHome || i > 0) el.append('/');
-    el.append(span);
+    span.textContent = text;
+    span.dataset.dir = dir;
+    span.onclick = () => loadFiles(dir);
+    return span;
+  };
+  const sep = () => { const s = document.createElement('span'); s.className = 'sep'; s.textContent = '/'; return s; };
+  el.append(crumb(inHome ? '~' : '/', inHome ? home : '/'));
+  let acc = inHome ? home : '';
+  segs.forEach((seg, i) => {
+    acc += '/' + seg;
+    if (inHome || i > 0) el.append(sep());
+    el.append(crumb(seg, acc));
   });
+  el.lastChild.classList.add('last');
   el.title = files.dir;
+  const up = $('files-up');
+  if (files.dir === '/') delete up.dataset.dir;
+  else up.dataset.dir = parentOf(files.dir);
 }
 
-function renderFiles(entries) {
+// Icon and color class for an entry, in the spirit of VS Code's file icons.
+function iconFor(e) {
+  if (e.type === 'dir') return ['folder', 'dir'];
+  if (e.type !== 'file') return ['symlink', 'other'];
+  const ext = e.name.includes('.') ? e.name.split('.').pop().toLowerCase() : '';
+  if (/^(png|jpe?g|gif|webp|svg|bmp|ico|heic|avif)$/.test(ext)) return ['image', 'img'];
+  if (/^(m?js|cjs|ts|jsx|tsx|json)$/.test(ext)) return ['file', ext === 'json' ? 'json' : 'js'];
+  if (/^(md|txt|rst|csv)$/.test(ext)) return ['file', 'md'];
+  if (/^(sh|bash|zsh|py|rb|go|rs|c|h|cpp)$/.test(ext)) return ['file', 'sh'];
+  return ['file', ''];
+}
+
+function select(e, full) {
+  files.sel = e ? { type: e.type, path: full, name: e.name } : null;
+  for (const li of $('files-list').children) li.classList.toggle('sel', !!e && li.dataset.path === full);
+}
+
+function download(full, name) {
+  const a = document.createElement('a');
+  a.href = `/api/files/download?path=${encodeURIComponent(full)}`;
+  a.download = name;
+  a.click();
+}
+
+// Draws the tree: the root's entries, with every open folder's entries indented under it.
+function renderFiles() {
   renderPath();
-  $('files-hidden').classList.toggle('active', files.hidden);
   const list = $('files-list');
   list.replaceChildren();
-  const shown = entries.filter((e) => files.hidden || !e.name.startsWith('.'));
-  shown.sort((a, b) => (a.type === 'dir') === (b.type === 'dir') ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) : a.type === 'dir' ? -1 : 1);
-  for (const e of shown) {
-    const full = files.dir.replace(/\/$/, '') + '/' + e.name;
+  const note = (text, depth, cls) => {
     const li = document.createElement('li');
-    let name;
-    if (e.type === 'dir') {
-      name = document.createElement('a');
-      name.href = '#';
-      name.textContent = e.name + '/';
-      name.onclick = (ev) => { ev.preventDefault(); loadFiles(full); };
-    } else if (e.type === 'file') {
-      name = document.createElement('a');
-      name.href = `/api/files/download?path=${encodeURIComponent(full)}`;
-      name.download = e.name;
-      name.title = `Download ${e.name}`;
+    li.className = cls;
+    li.style.paddingLeft = `${26 + depth * 12}px`;
+    li.textContent = text;
+    list.append(li);
+  };
+  const add = (dir, depth) => {
+    const entries = files.kids.get(dir);
+    if (!entries) return note('Loading…', depth, 'loading');
+    const shown = entries.filter((e) => files.hidden || !e.name.startsWith('.'));
+    shown.sort((a, b) => (a.type === 'dir') === (b.type === 'dir') ? a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) : a.type === 'dir' ? -1 : 1);
+    if (!shown.length) return note('Empty folder', depth, 'empty');
+    for (const e of shown) {
+      const full = join(dir, e.name);
+      const open = e.type === 'dir' && files.open.has(full);
+      const li = document.createElement('li');
+      li.style.paddingLeft = `${4 + depth * 12}px`;
+      // Indent guides: a faint line per level, tying nested rows to their folder, as in VS Code.
+      for (let d = 0; d < depth; d++) {
+        const g = document.createElement('span');
+        g.className = 'guide';
+        g.style.left = `${12 + d * 12}px`;
+        li.append(g);
+      }
+      li.dataset.path = full;
+      li.entry = e;
+      if (e.type === 'dir') li.dataset.dir = full;
+      if (files.sel?.path === full) li.classList.add('sel');
+      const twist = document.createElement('span');
+      twist.className = 'twist';
+      if (e.type === 'dir') twist.append(icon(open ? 'chev-down' : 'chev-right'));
+      const [ic, cls] = iconFor(e);
+      const fi = document.createElement('span');
+      fi.className = `ficon ${cls}`;
+      fi.append(icon(open ? 'folder-open' : ic));
+      const name = document.createElement('span');
+      name.className = `fname ${e.type}`;
       name.textContent = e.name;
-    } else {
-      name = document.createElement('span');
-      name.textContent = e.name;
+      name.title = full;
+      const size = document.createElement('span');
+      size.className = 'fsize';
+      size.textContent = e.type === 'file' ? fmtSize(e.size) : '';
+      const acts = document.createElement('span');
+      acts.className = 'acts';
+      acts.append(
+        iconButton('terminal', 'Type this path into the terminal', () => insertPath(full)),
+        iconButton('more', 'Rename, move, delete…', (b) => { select(e, full); const r = b.getBoundingClientRect(); showMenu(r.right, r.bottom + 2, rowMenu(li, e, full), { right: true, title: e.name }); }),
+      );
+      li.append(twist, fi, name, size, acts);
+      li.onclick = () => { select(e, full); if (e.type === 'dir') toggleDir(full); };
+      li.ondblclick = () => { if (e.type === 'file') download(full, e.name); };
+      li.oncontextmenu = (ev) => { ev.preventDefault(); select(e, full); showMenu(ev.clientX, ev.clientY, rowMenu(li, e, full), { title: e.name }); };
+      // Dragging a row onto the terminal types its path; onto a folder in the panel moves it, as in VS Code.
+      li.draggable = true;
+      li.ondragstart = (ev) => {
+        ev.dataTransfer.setData('text/plain', shellQuote(full) + ' ');
+        ev.dataTransfer.setData(MOVE_TYPE, JSON.stringify({ path: full, name: e.name }));
+        ev.dataTransfer.effectAllowed = 'copyMove';
+      };
+      list.append(li);
+      if (open) add(full, depth + 1);
     }
-    name.className = `fname ${e.type}`;
-    const size = document.createElement('span');
-    size.className = 'fsize';
-    size.textContent = e.type === 'file' ? fmtSize(e.size) : '';
-    const insert = document.createElement('button');
-    insert.className = 'fact';
-    insert.textContent = 'path';
-    insert.title = 'Type this path into the terminal';
-    insert.onclick = () => insertPath(full);
-    li.append(name, size, insert);
-    list.append(li);
-  }
-  if (!shown.length) {
-    const li = document.createElement('li');
-    li.className = 'muted';
-    li.textContent = 'Empty folder';
-    list.append(li);
-  }
+  };
+  add(files.dir, 0);
 }
+
+// Keyboard in the tree, as in VS Code: arrows move and fold, Enter opens, F2 renames, Delete deletes.
+$('files-list').addEventListener('keydown', (ev) => {
+  const rows = [...$('files-list').querySelectorAll('li[data-path]')];
+  if (!rows.length) return;
+  const i = rows.findIndex((li) => li.dataset.path === files.sel?.path);
+  const li = rows[i];
+  const e = li?.entry;
+  const full = li?.dataset.path;
+  const go = (n) => { const r = rows[Math.max(0, Math.min(rows.length - 1, n))]; select(r.entry, r.dataset.path); r.scrollIntoView({ block: 'nearest' }); };
+  const keys = {
+    ArrowDown: () => go(i + 1),
+    ArrowUp: () => go(i < 0 ? 0 : i - 1),
+    Home: () => go(0),
+    End: () => go(rows.length - 1),
+    ArrowRight: () => { if (e?.type === 'dir') { if (files.open.has(full)) go(i + 1); else toggleDir(full, true); } },
+    ArrowLeft: () => {
+      if (e?.type === 'dir' && files.open.has(full)) return toggleDir(full, false);
+      const p = full && parentOf(full);
+      const up = rows.findIndex((r) => r.dataset.path === p);
+      if (up >= 0) go(up);
+    },
+    Enter: () => { if (e?.type === 'dir') toggleDir(full); else if (e?.type === 'file') download(full, e.name); },
+    F2: () => { if (li) startRename(li, e, full); },
+    Delete: () => { if (li) deleteEntry(e, full); },
+    Escape: () => select(null),
+  };
+  const fn = keys[ev.key];
+  if (!fn) return;
+  ev.preventDefault();
+  fn();
+});
 
 // Quotes a path for the shell, as VS Code does when a file is dropped on its terminal.
 function shellQuote(p) {
@@ -385,15 +580,156 @@ function insertPath(p) {
   term.focus();
 }
 
-// Uploads one File into `dir`. Asks before replacing. Resolves with the saved path or null.
-function uploadFile(file, dir, name) {
-  const toast = showToast(`Uploading ${name}…`, { progress: true });
-  const attempt = (overwrite) => new Promise((resolve) => {
+// ---- rename, move, delete ----
+
+const MOVE_TYPE = 'application/x-cloudflare-tmux-path';
+
+function renamePath(from, to) {
+  return api('POST', `/api/files/rename?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+}
+
+// The row's name becomes an input, as in VS Code. Enter saves, Escape or an empty name cancels.
+function startRename(li, e, full) {
+  const nameEl = li.querySelector('.fname');
+  const input = document.createElement('input');
+  input.className = 'frename';
+  input.value = e.name;
+  nameEl.replaceWith(input);
+  input.focus();
+  const dot = e.type === 'file' ? e.name.lastIndexOf('.') : -1;
+  input.setSelectionRange(0, dot > 0 ? dot : e.name.length);
+  let done = false;
+  const finish = async (commit) => {
+    if (done) return;
+    done = true;
+    const name = input.value.trim();
+    input.replaceWith(nameEl);
+    if (!commit || !name || name === e.name) return;
+    if (!FILENAME_RE.test(name) || name === '.' || name === '..') return filesError('A name can\'t contain /');
+    try { await renamePath(full, join(parentOf(full), name)); refreshFiles(); }
+    catch (err) { filesError(err.message); }
+  };
+  input.onkeydown = (ev) => {
+    ev.stopPropagation();
+    if (ev.key === 'Enter') finish(true);
+    else if (ev.key === 'Escape') finish(false);
+  };
+  input.onblur = () => finish(true);
+}
+
+// Moves `full` into `destDir`, with Undo in the corner instead of a confirmation.
+async function movePath(full, name, destDir) {
+  const to = join(destDir, name);
+  if (to === full || destDir === full || destDir.startsWith(full + '/')) return;
+  try { await renamePath(full, to); } catch (err) { return showToast(`${name}: ${err.message}`, { bad: true, ttl: 8000 }); }
+  if (files.sel?.path === full) files.sel = null;
+  refreshFiles();
+  showToast(`Moved ${name} to ${prettyPath(destDir)}`, { ttl: 10000, actions: [['Undo', async () => {
+    try { await renamePath(to, full); refreshFiles(); } catch (err) { showToast(`${name}: ${err.message}`, { bad: true, ttl: 8000 }); }
+  }]] });
+}
+
+// "Move to…" for phones and for far-away folders: a path, absolute, ~-relative or relative to the panel's folder.
+function moveTo(full, name) {
+  const dest = expandPath(prompt(`Move ${name} to folder`, prettyPath(files.dir)) || '');
+  if (dest) movePath(full, name, dest);
+}
+
+async function deleteEntry(e, full) {
+  const ok = await confirmDialog({
+    title: e.type === 'dir' ? `Delete the folder '${e.name}' and everything in it?` : `Delete '${e.name}'?`,
+    detail: `${prettyPath(full)}\nThis can't be undone. There is no trash on the server.`,
+    confirm: 'Delete',
+    danger: true,
+  });
+  if (!ok) return;
+  try { await api('DELETE', `/api/files?path=${encodeURIComponent(full)}`); if (files.sel?.path === full) files.sel = null; refreshFiles(); }
+  catch (err) { filesError(err.message); }
+}
+
+function rowMenu(li, e, full) {
+  const items = [];
+  if (e.type === 'dir') items.push(['Open as root', () => loadFiles(full)], ['New folder inside…', () => newFolder(full)]);
+  else if (e.type === 'file') items.push(['Download', () => download(full, e.name), '', 'Enter']);
+  items.push(['Insert path into terminal', () => insertPath(full)]);
+  items.push(['Copy path', () => navigator.clipboard?.writeText(full).catch(() => showToast('Clipboard access was refused.', { bad: true, ttl: 6000 }))]);
+  items.push(null);
+  items.push(['Rename…', () => startRename(li, e, full), '', 'F2']);
+  items.push(['Move to…', () => moveTo(full, e.name)]);
+  items.push(['Delete', () => deleteEntry(e, full), 'danger', 'Delete']);
+  return items;
+}
+
+async function newFolder(dir) {
+  const name = (prompt('New folder name') || '').trim();
+  if (!name) return;
+  if (!FILENAME_RE.test(name) || name === '.' || name === '..') return filesError('A folder name can\'t contain /');
+  try { await api('POST', `/api/files/mkdir?path=${encodeURIComponent(join(dir, name))}`); }
+  catch (err) { return filesError(err.message); }
+  if (dir !== files.dir) files.open.add(dir);
+  refreshFiles();
+}
+
+function headerMenu() {
+  return [
+    ['Show hidden files', () => { files.hidden = !files.hidden; store.set('files-hidden', files.hidden ? '1' : '0'); renderFiles(); }, files.hidden ? 'checked' : ''],
+    null,
+    ['Home folder', () => loadFiles(null)],
+    ['The terminal\'s folder', () => loadTerminalDir()],
+    ['Open folder…', () => { const p = expandPath(prompt('Folder path', prettyPath(files.dir)) || ''); if (p) loadFiles(p); }],
+  ];
+}
+
+// A small menu at a point, or a bottom sheet on a phone, where 26 px rows are too small to tap.
+// Items are [label, fn, class, shortcut] or null for a separator; `title` heads the sheet.
+let menu = null;
+const isTouch = () => window.matchMedia('(max-width: 720px), (pointer: coarse)').matches;
+function closeMenu() { if (menu) { menu.backdrop?.remove(); menu.remove(); menu = null; } }
+function showMenu(x, y, items, { right = false, title = '' } = {}) {
+  closeMenu();
+  const el = document.createElement('div');
+  el.className = 'menu';
+  el.setAttribute('role', 'menu');
+  if (isTouch()) {
+    el.classList.add('sheet');
+    const backdrop = document.createElement('div');
+    backdrop.className = 'sheet-backdrop';
+    document.body.append(backdrop);
+    el.backdrop = backdrop;
+    const grip = document.createElement('div');
+    grip.className = 'grip';
+    el.append(grip);
+    if (title) { const h = document.createElement('div'); h.className = 'sheet-title'; h.textContent = title; el.append(h); }
+    items = items.map((it) => it && [it[0].replace(/…$/, ''), it[1], it[2]]); // no shortcuts on a phone
+  }
+  for (const it of items) {
+    if (!it) { el.append(document.createElement('hr')); continue; }
+    const b = document.createElement('button');
+    b.textContent = it[0];
+    if (it[2]) b.className = it[2];
+    if (it[3]) { const k = document.createElement('span'); k.className = 'kbd'; k.textContent = it[3]; b.append(k); }
+    b.onclick = () => { closeMenu(); it[1](); };
+    el.append(b);
+  }
+  document.body.append(el);
+  menu = el;
+  if (el.classList.contains('sheet')) return;
+  const r = el.getBoundingClientRect();
+  el.style.left = `${Math.max(8, Math.min(right ? x - r.width : x, innerWidth - r.width - 8))}px`;
+  el.style.top = `${Math.max(8, Math.min(y, innerHeight - r.height - 8))}px`;
+  menu = el;
+}
+document.addEventListener('pointerdown', (ev) => { if (menu && !menu.contains(ev.target)) closeMenu(); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeMenu(); }, true);
+
+// One upload request. Resolves { status, data }, or null when aborted or when the page has to re-authenticate.
+function sendFile(file, dir, name, overwrite, onProgress, handle) {
+  return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     const q = `dir=${encodeURIComponent(dir)}&name=${encodeURIComponent(name)}${overwrite ? '&overwrite=1' : ''}`;
     xhr.open('POST', `/api/files/upload?${q}`);
     xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) toast.progress(ev.loaded / ev.total); };
+    xhr.upload.onprogress = (ev) => { if (ev.lengthComputable) onProgress(ev.loaded / ev.total); };
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch { /* not json */ }
@@ -402,138 +738,335 @@ function uploadFile(file, dir, name) {
       resolve({ status: xhr.status, data });
     };
     xhr.onerror = () => resolve({ status: 0, data: { error: 'Network error' } });
+    xhr.onabort = () => resolve(null);
+    handle.abort = () => xhr.abort();
     xhr.send(file);
   });
-  return (async () => {
-    let r = await attempt(false);
-    if (r && r.status === 409 && confirm(`${name} already exists in ${dir}. Replace it?`)) r = await attempt(true);
-    if (!r) { toast.remove(); return null; }
-    if (r.status !== 201) {
-      toast.update(`${name}: ${r.data.error || `upload failed (${r.status})`}`, { bad: true, ttl: 8000 });
-      return null;
-    }
-    toast.update(`Saved ${r.data.path}`, { ttl: 10000, action: ['Insert path', () => insertPath(r.data.path)] });
-    if (files.dir === dir) loadFiles(dir);
-    return r.data.path;
-  })();
 }
 
-async function uploadAll(fileList) {
-  const list = [...fileList].filter((f) => f.size > 0 || f.type);
-  if (!list.length) return;
-  if (!files.dir) await loadFiles();
-  if (!files.dir) return;
-  const dir = files.dir;
+// "name (2).ext", as file managers name a second copy.
+function numbered(name, n) {
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? `${name.slice(0, dot)} (${n})${name.slice(dot)}` : `${name} (${n})`;
+}
+
+// Uploads a batch of { file, rel } into `dir` (the panel's folder when not given). `rel` is the name, or a
+// path inside a dropped folder; { dir: rel } makes an empty folder. One toast shows progress and the result.
+// `insert` types each saved path into the terminal, as VS Code does for a drop on its terminal.
+async function uploadAll(items, { dir, insert = false } = {}) {
+  if (!items.length) return;
+  dir = dir || await uploadDir();
+  if (!dir) return;
   if (isWide() && !filesVisible()) showFiles(true);
-  for (const f of list) await uploadFile(f, dir, f.name);
+  const total = items.reduce((n, it) => n + (it.file?.size || 0), 0) || 1;
+  const many = items.length > 1;
+  const handle = {};
+  let cancelled = false;
+  let done = 0;
+  let policy = null; // what to do with duplicates for the rest of this batch
+  const saved = [];
+  const failed = [];
+  const made = new Set();
+  const toast = showToast('Uploading…', { progress: true, actions: [['Cancel', () => { cancelled = true; handle.abort?.(); }]] });
+  const mkdir = async (d) => {
+    if (made.has(d)) return true;
+    try { await api('POST', `/api/files/mkdir?path=${encodeURIComponent(d)}`); made.add(d); return true; }
+    catch (err) { failed.push(`${prettyPath(d)}: ${err.message}`); return false; }
+  };
+  for (const [i, it] of items.entries()) {
+    if (cancelled) break;
+    const parts = it.rel.split('/').filter(Boolean);
+    const name = parts.pop();
+    const target = parts.length ? join(dir, parts.join('/')) : dir;
+    if (it.dir) { await mkdir(join(dir, it.rel)); continue; }
+    toast.update(`Uploading ${many ? `${i + 1} of ${items.length}: ` : ''}${name}`, { thumb: it.file });
+    if (parts.length && !(await mkdir(target))) continue;
+    const onProgress = (frac) => toast.progress((done + frac * it.file.size) / total);
+    let r = await sendFile(it.file, target, name, false, onProgress, handle);
+    if (r && r.status === 409) {
+      const choice = policy || await ask(`${name} already exists in ${prettyPath(target)}.${many ? ' Your choice applies to the rest of this upload.' : ''}`,
+        ['Replace', 'Keep both', 'Skip']) || 'Skip';
+      if (many) policy = choice;
+      if (choice === 'Replace') r = await sendFile(it.file, target, name, true, onProgress, handle);
+      else if (choice === 'Keep both') {
+        for (let n = 2; r && r.status === 409 && n < 100; n++) r = await sendFile(it.file, target, numbered(name, n), false, onProgress, handle);
+      } else r = { skipped: true };
+    }
+    if (!r) { if (cancelled) break; toast.remove(); return; }
+    done += it.file.size;
+    if (r.skipped) continue;
+    if (r.status === 201) saved.push(r.data.path);
+    else failed.push(`${name}: ${r.data.error || `upload failed (${r.status})`}`);
+  }
+  refreshFiles();
+  if (insert) saved.forEach(insertPath);
+  const n = saved.length;
+  const count = `${n} file${n === 1 ? '' : 's'}`;
+  if (failed.length) toast.update(`${n ? `${count} saved, ` : ''}${failed.length} failed: ${failed.join('; ')}`, { done: true, bad: true, ttl: 15000 });
+  else if (cancelled) toast.update(`Upload cancelled${n ? ` after ${count}` : ''}`, { done: true, ttl: 6000 });
+  else if (!n && made.size) toast.update(`Created ${made.size} folder${made.size === 1 ? '' : 's'} in ${prettyPath(dir)}`, { done: true, ttl: 6000 });
+  else if (!n) toast.remove();
+  else if (n === 1) toast.update(`Saved ${prettyPath(saved[0])}`, { done: true, ttl: 10000, actions: insert ? [] : [['Insert path', () => insertPath(saved[0])]] });
+  else toast.update(`Saved ${count} to ${prettyPath(dir)}`, { done: true, ttl: 10000, thumb: null, actions: insert || !n ? [] : [['Insert paths', () => saved.forEach(insertPath)]] });
 }
 
-function pastedName(type) {
-  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' }[type] || 'bin';
+// Pasted screenshots arrive as "image.png"; name them by time so they never collide.
+function pastedName(file) {
+  if (file.name && !/^image\.\w+$/i.test(file.name)) return file.name;
+  const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' }[file.type]
+    || (file.name ? file.name.split('.').pop() : 'bin');
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   return `pasted-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
 }
 
-$('files-btn').onclick = () => showFiles(!filesVisible());
-$('files-close').onclick = () => showFiles(false);
-$('files-refresh').onclick = () => loadFiles(files.dir);
-$('files-home').onclick = () => loadFiles();
-$('files-up').onclick = () => { if (files.dir && files.dir !== '/') loadFiles(files.dir.replace(/\/[^/]+\/?$/, '') || '/'); };
-$('files-hidden').onclick = () => {
-  files.hidden = !files.hidden;
-  store.set('files-hidden', files.hidden ? '1' : '0');
-  loadFiles(files.dir);
-};
-$('files-upload').onclick = () => $('files-input').click();
-$('files-input').onchange = () => { uploadAll($('files-input').files); $('files-input').value = ''; };
+const asItems = (fileList) => [...fileList].map((file) => ({ file, rel: file.name }));
 
-// Drag and drop anywhere on the terminal view. Folders can't be read by the browser and are skipped.
+// The Paste button reads the clipboard itself: for phones, and for when the terminal doesn't have focus.
+async function pasteClipboard() {
+  if (!navigator.clipboard?.read) return showToast('This browser can\'t read the clipboard here. Paste into the terminal instead.', { bad: true, ttl: 8000 });
+  let entries;
+  try { entries = await navigator.clipboard.read(); } catch { return showToast('Clipboard access was refused.', { bad: true, ttl: 6000 }); }
+  const list = [];
+  for (const it of entries) {
+    const type = it.types.find((t) => t.startsWith('image/'));
+    if (type) list.push(new File([await it.getType(type)], '', { type }));
+  }
+  if (!list.length) return showToast('No image in the clipboard.', { ttl: 5000 });
+  uploadAll(list.map((file) => ({ file, rel: pastedName(file) })), { dir: contextDir() });
+}
+
+$('files-btn').onclick = () => showFiles(!filesVisible());
+$('files-btn-m').onclick = () => showFiles(!filesVisible());
+$('files-close').onclick = () => showFiles(false);
+$('files-refresh').onclick = () => refreshFiles();
+$('files-collapse').onclick = () => { files.open.clear(); renderFiles(); };
+$('files-up').onclick = () => { if (files.dir && files.dir !== '/') loadFiles(parentOf(files.dir)); };
+$('files-more').onclick = (ev) => { const r = ev.currentTarget.getBoundingClientRect(); showMenu(r.right, r.bottom + 2, headerMenu(), { right: true }); };
+$('files-upload').onclick = () => $('files-input').click();
+$('files-input').onchange = () => { uploadAll(asItems($('files-input').files), { dir: contextDir() }); $('files-input').value = ''; };
+$('files-paste').onclick = pasteClipboard;
+$('files-mkdir').onclick = () => { if (files.dir) newFolder(contextDir()); };
+
+// Everything in a drop as { file, rel }, walking into dropped folders. Empty folders come back as { dir: rel }.
+async function droppedItems(dt) {
+  // Entries must be taken before the first await, or the browser forgets the drop.
+  const entries = [...(dt.items || [])].filter((it) => it.kind === 'file').map((it) => it.webkitGetAsEntry?.() || it.getAsFile());
+  if (!entries.length) return asItems([...dt.files].filter((f) => f.size > 0 || f.type)); // a folder shows up as an empty, typeless file
+  const out = [];
+  const walk = async (entry, rel) => {
+    if (entry.isFile) {
+      const file = await new Promise((res, rej) => entry.file(res, rej)).catch(() => null);
+      if (file) out.push({ file, rel });
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      let any = false;
+      for (;;) {
+        const batch = await new Promise((res, rej) => reader.readEntries(res, rej)).catch(() => []);
+        if (!batch.length) break;
+        any = true;
+        for (const e of batch) await walk(e, `${rel}/${e.name}`);
+      }
+      if (!any) out.push({ dir: true, rel });
+    }
+  };
+  for (const e of entries) {
+    if (e instanceof File) out.push({ file: e, rel: e.name });
+    else if (e) await walk(e, e.name);
+  }
+  return out;
+}
+
+// Drag and drop. Over the terminal: upload and type the paths, like VS Code's terminal. Over the panel: upload
+// into the folder under the pointer, like VS Code's explorer. A panel row dragged onto the terminal types its
+// path; dragged onto a folder, the breadcrumb or ↑ it moves there.
 {
   const view = $('terminal-view');
   let depth = 0;
-  const hasFiles = (ev) => [...(ev.dataTransfer?.types || [])].includes('Files');
+  let over = null; // the folder row under the pointer
+  const types = (ev) => [...(ev.dataTransfer?.types || [])];
+  const hasFiles = (ev) => types(ev).includes('Files');
+  const hasText = (ev) => types(ev).includes('text/plain');
+  const hasMove = (ev) => types(ev).includes(MOVE_TYPE);
+  const zone = (ev) => (ev.target.closest?.('#files') ? 'panel' : 'term');
+  const mark = (ev) => {
+    const z = hasFiles(ev) || hasMove(ev) ? zone(ev) : null;
+    $('drop').hidden = !(hasFiles(ev) && z === 'term');
+    $('files').classList.toggle('drop-here', hasFiles(ev) && z === 'panel');
+    const row = z === 'panel' ? ev.target.closest('[data-dir]') : null;
+    if (row !== over) { over?.classList.remove('drop-here'); row?.classList.add('drop-here'); over = row; }
+  };
+  const clear = () => { depth = 0; mark({ target: view }); $('files').classList.remove('drop-here'); };
   view.addEventListener('dragenter', (ev) => {
-    if (!hasFiles(ev)) return;
+    if (!hasFiles(ev) && !hasText(ev)) return;
     ev.preventDefault();
-    if (depth++ === 0) {
-      if (!files.dir) loadFiles();
-      $('drop-dir').textContent = files.dir ? files.dir.replace(files.home, '~') : '~';
-      $('drop').hidden = false;
-    }
+    if (depth++ === 0 && hasFiles(ev)) uploadDir().then((d) => { $('drop-dir').textContent = d ? prettyPath(d) : '~'; });
+    mark(ev);
   });
-  view.addEventListener('dragover', (ev) => { if (hasFiles(ev)) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; } });
-  view.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $('drop').hidden = true; } });
-  view.addEventListener('drop', (ev) => {
-    if (!hasFiles(ev)) return;
+  view.addEventListener('dragover', (ev) => {
+    if (!hasFiles(ev) && !hasText(ev)) return;
     ev.preventDefault();
-    depth = 0;
-    $('drop').hidden = true;
-    const items = [...(ev.dataTransfer.items || [])];
-    const dropped = items.length ? items.filter((it) => it.kind === 'file' && !(it.webkitGetAsEntry?.()?.isDirectory)).map((it) => it.getAsFile()).filter(Boolean)
-      : [...ev.dataTransfer.files];
-    if (items.some((it) => it.webkitGetAsEntry?.()?.isDirectory)) showToast('Folders can\'t be uploaded. Drop files instead.', { bad: true, ttl: 6000 });
-    uploadAll(dropped);
+    ev.dataTransfer.dropEffect = hasMove(ev) && zone(ev) === 'panel' ? 'move' : 'copy';
+    mark(ev);
+  });
+  view.addEventListener('dragleave', () => { if (--depth <= 0) clear(); });
+  view.addEventListener('drop', async (ev) => {
+    if (!hasFiles(ev) && !hasText(ev)) return;
+    ev.preventDefault();
+    const z = zone(ev);
+    const target = over?.dataset.dir || null;
+    clear();
+    if (!hasFiles(ev)) {
+      const moving = ev.dataTransfer.getData(MOVE_TYPE);
+      if (moving && z === 'panel') { if (target) { const m = JSON.parse(moving); movePath(m.path, m.name, target); } }
+      else if (z === 'term' && term) { sendInput(ev.dataTransfer.getData('text/plain')); term.focus(); }
+      return;
+    }
+    uploadAll(await droppedItems(ev.dataTransfer), { dir: target, insert: z === 'term' });
   });
 }
 
-// A pasted image (or file) in the terminal is uploaded; pasted text still goes to xterm.
-$('terminal').addEventListener('paste', (ev) => {
-  const items = [...(ev.clipboardData?.items || [])].filter((it) => it.kind === 'file');
-  if (!items.length) return;
-  ev.preventDefault();
-  ev.stopPropagation();
-  const list = items.map((it) => it.getAsFile()).filter(Boolean);
-  (async () => {
-    if (!files.dir) await loadFiles();
-    if (!files.dir) return;
-    const dir = files.dir;
-    if (isWide() && !filesVisible()) showFiles(true);
-    for (const f of list) await uploadFile(f, dir, f.name && f.name !== 'image.png' ? f.name : pastedName(f.type));
-  })();
+// A pasted image or file anywhere in the terminal view is uploaded and its path typed, as if dropped on the
+// terminal. Text pasted while nothing editable has focus goes to the terminal; text pasted into it is xterm's.
+document.addEventListener('paste', (ev) => {
+  if ($('terminal-view').hidden) return;
+  const dt = ev.clipboardData;
+  if (!dt) return;
+  let list = [...(dt.items || [])].filter((it) => it.kind === 'file').map((it) => it.getAsFile()).filter(Boolean);
+  if (!list.length) list = [...(dt.files || [])];
+  if (list.length) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    uploadAll(list.map((file) => ({ file, rel: pastedName(file) })), { insert: true });
+    return;
+  }
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return;
+  const text = dt.getData('text/plain');
+  if (text && term) { ev.preventDefault(); term.paste(text); term.focus(); }
 }, true);
 
 // ---------- toasts ----------
 
+// A message in the corner. Returns { update(msg, opts), progress(frac), remove() }. Options: bad, ttl, progress
+// (show a bar), thumb (a File to show a thumbnail of, null removes it), actions ([label, fn] pairs; fn runs and
+// the toast closes), done (drop the bar and the actions), onClose.
 function showToast(text, opts = {}) {
   const el = document.createElement('div');
-  el.className = 'toast' + (opts.bad ? ' bad' : '');
+  el.className = 'toast';
   const row = document.createElement('div');
   row.className = 't-row';
+  const img = document.createElement('img');
+  img.className = 't-thumb';
+  img.alt = '';
+  img.hidden = true;
+  img.onerror = () => { img.hidden = true; };
   const span = document.createElement('span');
   span.className = 't-text';
-  span.textContent = text;
+  const acts = document.createElement('div');
+  acts.className = 't-actions';
+  acts.hidden = true;
   const close = document.createElement('button');
-  close.textContent = '✕';
+  close.className = 'icon';
   close.title = 'Dismiss';
-  row.append(span, close);
-  el.append(row);
+  close.setAttribute('aria-label', 'Dismiss');
+  close.append(icon('close'));
+  row.append(img, span, close);
+  el.append(row, acts);
   let bar = null;
   let timer = null;
+  let url = null;
   const t = {
-    remove() { clearTimeout(timer); el.remove(); },
+    remove() { clearTimeout(timer); if (url) URL.revokeObjectURL(url); el.remove(); },
     progress(frac) { if (bar) bar.value = frac; },
     update(msg, o = {}) {
       span.textContent = msg;
       el.classList.toggle('bad', !!o.bad);
-      if (bar) { bar.remove(); bar = null; }
-      row.querySelectorAll('.t-action').forEach((b) => b.remove());
-      if (o.action) {
-        const b = document.createElement('button');
-        b.className = 't-action';
-        b.textContent = o.action[0];
-        b.onclick = () => { o.action[1](); t.remove(); };
-        row.insertBefore(b, close);
+      if (o.thumb !== undefined) {
+        if (url) { URL.revokeObjectURL(url); url = null; }
+        const show = !!o.thumb && /^image\//.test(o.thumb.type);
+        if (show) { url = URL.createObjectURL(o.thumb); img.src = url; }
+        img.hidden = !show;
+      }
+      if (o.done && bar) { bar.remove(); bar = null; }
+      if (o.actions || o.done) {
+        acts.replaceChildren(...(o.actions || []).map(([label, fn]) => {
+          const b = document.createElement('button');
+          b.className = 't-action';
+          b.textContent = label;
+          b.onclick = () => { t.remove(); fn(); };
+          return b;
+        }));
+        acts.hidden = !acts.childElementCount;
       }
       clearTimeout(timer);
       if (o.ttl) timer = setTimeout(t.remove, o.ttl);
     },
   };
-  close.onclick = t.remove;
+  close.onclick = () => { t.remove(); opts.onClose?.(); };
   if (opts.progress) { bar = document.createElement('progress'); bar.max = 1; bar.value = 0; el.append(bar); }
-  if (opts.ttl) timer = setTimeout(t.remove, opts.ttl);
+  t.update(text, opts);
   $('toasts').append(el);
   return t;
+}
+
+// A question in the corner. Resolves with the chosen label, or null when dismissed.
+// A modal question, as VS Code asks before deleting. Resolves true only for the confirm button. Cancel has
+// focus, so Enter or Escape right after opening never destroys anything.
+function confirmDialog({ title, detail = '', confirm = 'OK', danger = false }) {
+  return new Promise((resolve) => {
+    closeMenu();
+    const back = document.createElement('div');
+    back.className = 'modal-backdrop';
+    const box = document.createElement('div');
+    box.className = 'modal';
+    box.setAttribute('role', 'alertdialog');
+    box.setAttribute('aria-modal', 'true');
+    const head = document.createElement('div');
+    head.className = 'modal-head';
+    const ic = document.createElement('span');
+    ic.className = 'modal-icon' + (danger ? ' danger' : '');
+    ic.textContent = '!';
+    const text = document.createElement('div');
+    const h = document.createElement('div');
+    h.className = 'modal-title';
+    h.id = 'modal-title';
+    h.textContent = title;
+    const d = document.createElement('div');
+    d.className = 'modal-detail';
+    d.textContent = detail;
+    text.append(h, d);
+    head.append(ic, text);
+    box.setAttribute('aria-labelledby', 'modal-title');
+    const acts = document.createElement('div');
+    acts.className = 'modal-actions';
+    const yes = document.createElement('button');
+    yes.className = danger ? 'danger-fill' : 'primary';
+    yes.textContent = confirm;
+    const no = document.createElement('button');
+    no.textContent = 'Cancel';
+    acts.append(yes, no);
+    box.append(head, acts);
+    back.append(box);
+    document.body.append(back);
+    const prev = document.activeElement;
+    const done = (v) => { document.removeEventListener('keydown', onKey, true); back.remove(); prev?.focus?.(); resolve(v); };
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); done(false); }
+      else if (ev.key === 'Tab') { ev.preventDefault(); (document.activeElement === no ? yes : no).focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    yes.onclick = () => done(true);
+    no.onclick = () => done(false);
+    back.onclick = (ev) => { if (ev.target === back) done(false); };
+    no.focus();
+  });
+}
+
+function ask(text, labels) {
+  return new Promise((resolve) => {
+    showToast(text, { actions: labels.map((l) => [l, () => resolve(l)]), onClose: () => resolve(null) });
+  });
 }
 
 // ---------- second step ----------
@@ -574,6 +1107,7 @@ function route() {
   if (me.twofa === 'needed' || me.twofa === 'not-enrolled') return showTwofa();
   renderMe();
   $('logout-btn').hidden = !!me.local;
+  $('term-logout').hidden = !!me.local;
   const m = location.hash.match(/^#\/s\/(.+)$/);
   const name = m ? decodeURIComponent(m[1]) : null;
   if (name && NAME_RE.test(name)) {

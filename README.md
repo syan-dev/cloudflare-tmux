@@ -23,7 +23,7 @@
   <img src="docs/public/assets/img/dashboard.png" alt="The session dashboard" width="49%">
 </p>
 <p align="center">
-  <img src="docs/public/assets/img/files.png" alt="The file panel: browse folders, download, upload by drag and drop, or paste a screenshot" width="80%">
+  <img src="docs/public/assets/img/files.png" alt="The Explorer beside the terminal: browse folders, download, upload by drag and drop, or paste a screenshot" width="80%">
 </p>
 
 ## What you get
@@ -32,7 +32,7 @@
 - **No open ports.** Your server connects out to Cloudflare. It works behind NAT and CGNAT.
 - **Sign in with your Cloudflare account.** Only the people you list get in.
 - **Sessions keep running** when you close the tab. It's real tmux, so `tmux attach` works on the server too.
-- **Files too.** Browse folders, download, drag files in, or paste a screenshot into the terminal.
+- **Files too.** Browse folders, download, drop files or folders in. Paste a screenshot and its path is typed for you.
 - **One command to set up.** `./install.sh` does the Cloudflare side and installs the services.
 
 ## How it works

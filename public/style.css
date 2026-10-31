@@ -1,99 +1,247 @@
+/* VS Code "Dark Modern" palette, the look of github.dev. */
 :root {
-  --bg: #0f1115;
-  --panel: #171a21;
-  --border: #2a2f3a;
-  --text: #e6e6e6;
-  --muted: #8b93a3;
-  --accent: #4f8cff;
-  --danger: #e5534b;
-  --ok: #3fb950;
+  --bg: #1f1f1f;          /* editor */
+  --side: #181818;        /* sidebar, title bar, status bar, activity bar */
+  --border: #2b2b2b;
+  --border-strong: #454545;
+  --text: #cccccc;
+  --muted: #9d9d9d;
+  --dim: #868686;
+  --accent: #0078d4;
+  --accent-hover: #026ec1;
+  --hover: #2a2d2e;
+  --select: #04395e;
+  --input: #313131;
+  --input-border: #3c3c3c;
+  --danger: #f14c4c;
+  --ok: #89d185;
+  --warn: #cca700;
+  --font: "Segoe WPC", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-  font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 var(--font); }
 [hidden] { display: none !important; }
-.muted { color: var(--muted); font-size: 13px; }
+.muted { color: var(--muted); }
 .error { color: var(--danger); }
+.spacer { flex: 1; }
+svg { display: block; }
 
-.bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-  background: var(--panel); border-bottom: 1px solid var(--border); }
-.bar h1 { font-size: 17px; margin: 0; flex: 1; }
-.wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
-.row { display: flex; gap: 8px; }
-.me-user { color: var(--text); font-weight: 600; }
-
-input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg); color: var(--text); font: inherit; }
-button, .btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--panel); color: var(--text); font: inherit; cursor: pointer; text-decoration: none; }
-button:hover, .btn:hover { border-color: var(--muted); }
+button, .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 12px;
+  border-radius: 2px; border: 1px solid var(--input-border); background: var(--input); color: var(--text); font: inherit;
+  cursor: pointer; text-decoration: none; white-space: nowrap; }
+button:hover, .btn:hover { background: #3c3c3c; }
+button:focus-visible, .btn:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
 button.primary, .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover, .btn.primary:hover { background: var(--accent-hover); }
 button.danger { color: var(--danger); }
+button.icon { width: 22px; height: 22px; padding: 0; border: 0; background: none; border-radius: 4px; color: var(--text); }
+button.icon:hover { background: rgba(255,255,255,.1); }
+button.icon.active { color: #fff; background: rgba(255,255,255,.14); }
+input { height: 28px; padding: 0 8px; border-radius: 2px; border: 1px solid var(--input-border); background: var(--input);
+  color: var(--text); font: inherit; min-width: 0; }
+input::placeholder { color: var(--dim); }
 
-.sessions { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 8px; }
-.sessions li { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 10px;
-  background: var(--panel); border: 1px solid var(--border); flex-wrap: wrap; }
-.sessions .info { flex: 1; min-width: 140px; }
-.sessions .name { font-weight: 600; font-family: ui-monospace, monospace; }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; }
+/* ---- title bar ---- */
+.titlebar { display: flex; align-items: center; gap: 12px; height: 35px; padding: 0 12px; background: var(--side);
+  border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+.titlebar .title { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+/* The command center: VS Code's boxed title in the middle of the title bar. */
+#terminal-view .titlebar .title { flex: 0 1 520px; margin: 0 auto; height: 24px; line-height: 22px; padding: 0 12px;
+  border: 1px solid var(--border-strong); border-radius: 6px; background: #222; font-size: 12px; }
+#terminal-view .titlebar .back { flex: 1 1 0; }
+#terminal-view .titlebar .tb-right { flex: 1 1 0; display: flex; justify-content: flex-end; }
+.titlebar .title b { color: var(--text); font-weight: 600; font-family: var(--mono); }
+.titlebar .mark { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 600; white-space: nowrap; }
+.titlebar .mark svg { color: var(--accent); }
+.titlebar .me { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titlebar .me b { color: var(--text); font-weight: 600; }
+.titlebar .btn { height: 24px; padding: 0 10px; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: var(--text); text-decoration: none; white-space: nowrap; }
+.back:hover { color: #fff; }
+
+/* ---- dashboard ---- */
+#dashboard { min-height: 100%; display: flex; flex-direction: column; }
+.wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 32px 24px; }
+.wrap.narrow { max-width: 480px; }
+.wrap h2 { font-size: 20px; font-weight: 400; margin: 0 0 16px; }
+.section { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+.row { display: flex; gap: 8px; }
+.row input { flex: 1; }
+.sessions { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: var(--side); }
+.sessions li { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.sessions li:first-child { border-top: 0; }
+.sessions li:hover { background: var(--hover); }
+.sessions .info { flex: 1; min-width: 160px; }
+.sessions .name { font-weight: 600; font-family: var(--mono); display: flex; align-items: center; }
+.sessions .name .dot { margin-right: 8px; }
+.sessions li button, .sessions li .btn { height: 26px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
 .dot.on { background: var(--ok); }
+#empty { padding: 24px; text-align: center; }
 
-#terminal-view { position: fixed; inset: 0; display: flex; flex-direction: column; }
-.term-bar { padding: 6px 12px; }
-.back { color: var(--accent); text-decoration: none; white-space: nowrap; }
-.term-name { flex: 1; font-family: ui-monospace, monospace; font-weight: 600;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.status { font-size: 12px; color: var(--muted); }
+/* ---- terminal view: the workbench ---- */
+#terminal-view { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
+.workbench { flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; }
+.activity { width: 48px; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; padding: 4px 0;
+  background: var(--side); border-right: 1px solid var(--border); }
+.activity .act { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border: 0; background: none;
+  color: var(--dim); border-left: 2px solid transparent; border-radius: 0; padding: 0; }
+.activity .act:hover { color: var(--text); background: none; }
+.activity .act.active { color: #fff; border-left-color: var(--accent); }
+.activity .spacer { flex: 1; }
+.editor { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.tabs { display: flex; height: 35px; background: var(--side); flex: 0 0 auto; }
+.tab { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 10px; height: 35px; min-width: 120px; max-width: 260px;
+  background: var(--bg); color: #fff; border-top: 1px solid var(--accent); border-right: 1px solid var(--border); font-size: 13px; }
+.tab > svg { color: var(--muted); flex: 0 0 auto; }
+.tab #tab-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-close { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; color: var(--text); }
+.tab-close:hover { background: rgba(255,255,255,.1); }
+.tabs-fill { flex: 1; border-bottom: 1px solid var(--border); }
+#terminal { flex: 1; min-width: 0; min-height: 0; padding: 6px 0 0 12px; background: var(--bg); }
+.status { font-size: 12px; }
 .status.ok { color: var(--ok); }
-.status.bad { color: var(--danger); }
-#terminal { flex: 1; min-width: 0; min-height: 0; padding: 4px; background: #000; }
-.term-body { flex: 1; min-height: 0; display: flex; position: relative; }
-.files-btn { padding: 4px 10px; font-size: 13px; }
-.files-btn.active { border-color: var(--accent); color: var(--accent); }
+.status.bad { color: var(--warn); }
 
-/* ---- file panel ---- */
-.files { width: 320px; flex: 0 0 auto; display: flex; flex-direction: column; background: var(--panel);
-  border-left: 1px solid var(--border); min-height: 0; }
-.files-bar { display: flex; align-items: center; gap: 4px; padding: 6px; border-bottom: 1px solid var(--border); }
-.files-bar button { padding: 4px 8px; font-size: 13px; flex: 0 0 auto; }
-.files-bar button.active { border-color: var(--accent); color: var(--accent); }
-.files-path { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted);
-  display: flex; justify-content: flex-end; overflow: hidden; white-space: nowrap; }
-.files-path span { flex: 0 0 auto; cursor: pointer; }
-.files-path span:hover { color: var(--text); text-decoration: underline; }
-.files-msg { margin: 8px; font-size: 13px; }
-.files-list { list-style: none; margin: 0; padding: 4px 0; overflow-y: auto; flex: 1; min-height: 0; }
-.files-list li { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 13px; }
-.files-list li:hover { background: var(--bg); }
-.files-list .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--text); text-decoration: none; cursor: pointer; font-family: ui-monospace, monospace; }
-.files-list .fname.dir { color: var(--accent); }
-.files-list .fname.other { color: var(--muted); cursor: default; }
-.files-list .fsize { color: var(--muted); font-size: 12px; flex: 0 0 auto; }
-.files-list .fact { padding: 2px 6px; font-size: 12px; flex: 0 0 auto; opacity: .7; }
-.files-list .fact:hover { opacity: 1; }
-.files-hint { margin: 0; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 12px; }
-@media (max-width: 720px) {
-  .files { position: absolute; inset: 0; width: auto; border-left: 0; }
+/* ---- sidebar: the explorer ---- */
+.sidebar { width: 300px; flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; background: var(--side);
+  border-right: 1px solid var(--border); }
+.side-head { display: flex; align-items: center; gap: 2px; height: 35px; padding: 0 8px 0 20px; flex: 0 0 auto; }
+.side-title { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text); }
+.side-close { display: none; }
+.side-root { display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px 0 4px; flex: 0 0 auto; }
+.side-root .files-path { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; white-space: nowrap;
+  font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.side-root .files-path .sep { color: var(--dim); }
+.side-root .files-path span[data-dir] { flex: 0 0 auto; cursor: pointer; padding: 1px 3px; border-radius: 3px; }
+.side-root .files-path span[data-dir]:hover { color: var(--text); background: var(--hover); }
+.side-root .files-path span[data-dir].last { color: var(--text); font-weight: 700; text-transform: uppercase; font-family: var(--font); font-size: 11px; }
+.files-msg { margin: 4px 12px; font-size: 12px; }
+.tree { list-style: none; margin: 0; padding: 0 0 8px; flex: 1; min-height: 0; overflow-y: auto; }
+.tree:focus, .tree:focus-visible { outline: none; }
+.tree li { position: relative; display: flex; align-items: center; height: 22px; padding-right: 6px; cursor: pointer; user-select: none;
+  white-space: nowrap; border: 1px solid transparent; }
+.tree .guide { position: absolute; top: -1px; bottom: -1px; width: 1px; background: #585858; opacity: .45; pointer-events: none; }
+.tree:hover .guide { opacity: .8; }
+.tree li:hover { background: var(--hover); }
+.tree li.sel { background: var(--select); }
+.tree:focus-within li.sel { border-color: var(--accent); }
+.tree li.drop-here { background: rgba(0,120,212,.25); border-color: var(--accent); }
+.tree .twist { width: 16px; height: 16px; flex: 0 0 auto; color: var(--text); display: flex; align-items: center; justify-content: center; }
+.tree .ficon { width: 16px; height: 16px; flex: 0 0 auto; margin-right: 6px; color: var(--muted); }
+.tree .ficon.dir { color: #dcb67a; }
+.tree .ficon.js, .tree .ficon.json { color: #cbcb41; }
+.tree .ficon.md { color: #519aba; }
+.tree .ficon.img { color: #a074c4; }
+.tree .ficon.sh { color: #8dc149; }
+.tree .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text); text-decoration: none; }
+.tree .fname.other { color: var(--dim); }
+.tree .fsize { color: var(--dim); font-size: 11px; margin-left: 8px; }
+.tree .acts { display: none; gap: 2px; margin-left: 4px; }
+.tree li:hover .acts, .tree li.sel .acts { display: flex; }
+.tree li:hover .fsize, .tree li.sel .fsize { display: none; }
+.tree .acts button.icon { width: 20px; height: 20px; color: var(--text); }
+.tree .frename { height: 20px; flex: 1; min-width: 0; padding: 0 4px; font-size: 13px; border-color: var(--accent); background: var(--input); }
+.tree li.empty, .tree li.loading { color: var(--dim); font-style: italic; cursor: default; }
+.tree li.empty:hover, .tree li.loading:hover { background: none; }
+.sidebar.drop-here { box-shadow: inset 0 0 0 2px var(--accent); }
+.side-root [data-dir].drop-here, .side-head [data-dir].drop-here { box-shadow: 0 0 0 2px var(--accent); border-radius: 3px; color: var(--text); }
+.files-hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.5; flex: 0 0 auto; }
+
+/* ---- drop overlay over the terminal ---- */
+.drop { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(0,120,212,.16);
+  border: 2px dashed var(--accent); pointer-events: none; text-align: center; padding: 16px; font-size: 15px; color: #fff; }
+.drop > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.drop code { font-family: var(--mono); font-size: 13px; background: rgba(0,0,0,.45); padding: 2px 6px; border-radius: 3px; }
+@media (min-width: 721px) {
+  .drop { left: 48px; }
+  .workbench:has(.sidebar:not([hidden])) .drop { left: 348px; }
 }
 
-.drop { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(79,140,255,.18);
-  border: 3px dashed var(--accent); font-size: 18px; pointer-events: none; }
-.drop code { font-size: 15px; }
+/* ---- status bar ---- */
+/* Blue across the width with a green remote badge, as github.dev shows it. */
+.statusbar { display: flex; align-items: stretch; height: 22px; background: #007acc; font-size: 12px; color: #fff;
+  flex: 0 0 auto; overflow: hidden; }
+.statusbar .sb { display: flex; align-items: center; gap: 5px; padding: 0 8px; white-space: nowrap; }
+.statusbar .sb.remote { background: #16825d; color: #fff; padding: 0 10px; }
+.statusbar .sb.dim { color: rgba(255,255,255,.9); }
+.statusbar .status { padding: 0 8px; display: flex; align-items: center; gap: 6px; color: #fff; }
+.statusbar .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.6); }
+.statusbar .status.ok::before { background: #fff; }
+.statusbar .status.bad { background: #c72e2e; }
+.statusbar .status.bad::before { background: #fff; }
 
-.toasts { position: fixed; right: 12px; bottom: 12px; z-index: 10; display: grid; gap: 8px; max-width: min(380px, 90vw); }
-.toast { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
-  font-size: 13px; display: grid; gap: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
-.toast.bad { border-color: var(--danger); }
-.toast .t-row { display: flex; align-items: center; gap: 8px; }
+/* ---- context menu ---- */
+.menu { position: fixed; z-index: 20; min-width: 190px; display: grid; padding: 4px 0; background: var(--bg);
+  border: 1px solid var(--border-strong); border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+.menu button { position: relative; height: 26px; border: 0; border-radius: 0; background: none; justify-content: flex-start; padding: 0 20px 0 26px; font-size: 13px; }
+.menu button:hover { background: var(--accent); color: #fff; }
+.menu button.danger:hover { background: var(--danger); color: #fff; }
+.menu button .kbd { margin-left: auto; padding-left: 24px; font-size: 11px; color: var(--muted); }
+.menu button:hover .kbd { color: #fff; }
+.menu button.checked::before { content: "✓"; position: absolute; left: 9px; }
+.menu hr { border: 0; border-top: 1px solid var(--border-strong); margin: 4px 0; }
+/* On a phone the menu is a bottom sheet with rows big enough to tap. */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 19; background: rgba(0,0,0,.5); }
+.menu.sheet { left: 0; right: 0; bottom: 0; top: auto; min-width: 0; padding: 8px 0 calc(16px + env(safe-area-inset-bottom));
+  background: #252526; border: 0; border-top: 1px solid var(--border-strong); border-radius: 12px 12px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,.5); }
+.menu.sheet .grip { width: 36px; height: 4px; border-radius: 2px; background: #5a5a5a; margin: 0 auto 8px; }
+.menu.sheet .sheet-title { padding: 4px 20px 12px; color: #fff; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; border-bottom: 1px solid var(--input-border); margin-bottom: 6px; }
+.menu.sheet button { height: 48px; padding: 0 20px; font-size: 15px; }
+.menu.sheet button:hover { background: rgba(255,255,255,.06); color: var(--text); }
+.menu.sheet button.danger, .menu.sheet button.danger:hover { color: var(--danger); background: none; }
+.menu.sheet hr { border-top-color: var(--input-border); margin: 6px 0; }
+
+/* ---- notifications ---- */
+.toasts { position: fixed; right: 12px; bottom: 34px; z-index: 10; display: grid; gap: 8px; width: min(400px, calc(100vw - 24px)); }
+.toast { background: #252526; border: 1px solid var(--border-strong); border-radius: 4px; padding: 10px 12px; font-size: 13px;
+  display: grid; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+.toast.bad { border-left: 3px solid var(--danger); }
+.toast .t-row { display: flex; align-items: center; gap: 10px; }
 .toast .t-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.toast button { padding: 4px 8px; font-size: 12px; }
-.toast progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.toast .t-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 3px; border: 1px solid var(--border-strong); background: #000; flex: 0 0 auto; }
+.toast .t-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.toast .t-actions button { height: 24px; padding: 0 10px; }
+.toast .t-actions button:first-child { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toast .t-row > button.icon { width: 20px; height: 20px; }
+.toast progress { width: 100%; height: 3px; accent-color: var(--accent); border: 0; }
 
-.keys { display: none; gap: 4px; padding: 6px; background: var(--panel); border-top: 1px solid var(--border);
-  overflow-x: auto; }
-.keys button { padding: 6px 10px; font-family: ui-monospace, monospace; flex: 0 0 auto; }
-.keys button.active { background: var(--accent); color: #fff; }
+/* ---- mobile keys ---- */
+.keys { display: none; gap: 4px; padding: 6px; background: var(--side); border-top: 1px solid var(--border); overflow-x: auto; flex: 0 0 auto; }
+.keys button { height: 30px; padding: 0 10px; font-family: var(--mono); flex: 0 0 auto; }
+.keys button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (pointer: coarse) { .keys { display: flex; } }
-.wrap.narrow { max-width: 480px; }
-.wrap h2 { font-size: 18px; margin: 24px 0 12px; }
+
+/* ---- narrow screens: the sidebar covers the terminal, the activity bar goes ---- */
+.titlebar .files-btn { display: none; }
+/* Ctrl+V / Cmd+V paste an image anywhere on a computer. Phones rarely put images in paste events, so they
+   get a button that reads the clipboard directly. */
+#files-paste { display: none; }
+@media (max-width: 720px), (pointer: coarse) { #files-paste { display: inline-flex; } }
+@media (max-width: 720px) {
+  .activity { display: none; }
+  .titlebar .files-btn { display: inline-flex; }
+  .titlebar .title { text-align: left; }
+  .sidebar { position: absolute; inset: 0; width: auto; border-right: 0; z-index: 8; }
+  .side-close { display: inline-flex; }
+  .statusbar .sb.hint { display: none; }
+  .wrap { padding: 16px; }
+}
+
+/* ---- modal confirm, as VS Code asks before a delete ---- */
+.modal-backdrop { position: fixed; inset: 0; z-index: 30; display: grid; place-items: start center; padding-top: 18vh; background: rgba(0,0,0,.4); }
+.modal { width: min(440px, calc(100vw - 32px)); background: #252526; border: 1px solid var(--border-strong); border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6); padding: 20px 20px 16px; display: grid; gap: 20px; }
+.modal-head { display: flex; gap: 14px; align-items: flex-start; }
+.modal-icon { width: 32px; height: 32px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 18px;
+  color: #1f1f1f; background: var(--warn); }
+.modal-icon.danger { background: var(--danger); color: #fff; }
+.modal-title { font-size: 14px; font-weight: 600; color: #fff; overflow-wrap: anywhere; }
+.modal-detail { margin-top: 6px; font-size: 12px; color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.modal-actions button { min-width: 80px; }
+button.danger-fill { background: #c72e2e; border-color: #c72e2e; color: #fff; }
+button.danger-fill:hover { background: #d93f3f; }
+@media (max-width: 720px) { .modal-actions button { height: 40px; flex: 1; } }

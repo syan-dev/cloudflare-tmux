@@ -282,7 +282,8 @@ function runFiles(account, args, { input, output, timeout } = {}) {
 
 // HTTP status for a helper failure.
 function filesStatus(err) {
-  return { ENOENT: 404, ENOTDIR: 404, EACCES: 403, EPERM: 403, EEXIST: 409, EISDIR: 400, EINVAL: 400, ELOOP: 400, ENAMETOOLONG: 400 }[err.code] || 500;
+  return { ENOENT: 404, ENOTDIR: 404, EACCES: 403, EPERM: 403, EEXIST: 409, EISDIR: 400, EINVAL: 400, ELOOP: 400, ENAMETOOLONG: 400,
+    EXDEV: 400, ENOTEMPTY: 400, EBUSY: 400 }[err.code] || 500;
 }
 
 // A path from the browser: absolute, no NUL bytes, a sane length. Permissions are left to the kernel,
@@ -290,7 +291,8 @@ function filesStatus(err) {
 function filePath(value) {
   const p = String(value || '');
   if (!p || !path.posix.isAbsolute(p) || p.includes('\0') || p.length > 4096) return null;
-  return path.posix.normalize(p);
+  // No trailing slash, so "/home/an/" can't slip past checks that compare against "/home/an".
+  return path.posix.normalize(p).replace(/(.)\/+$/, '$1');
 }
 const FILENAME_RE = /^[^/\0]{1,255}$/;
 
@@ -344,7 +346,7 @@ app.use((req, res, next) => {
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store',
-    'Content-Security-Policy': "default-src 'self'; connect-src 'self' wss: ws:; style-src 'self' 'unsafe-inline'; img-src 'self' data:",
+    'Content-Security-Policy': "default-src 'self'; connect-src 'self' wss: ws:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:",
   });
   // State-changing requests must come from this site.
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -401,6 +403,18 @@ app.post('/api/sessions/:name/rename', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.stderr || err.message }); }
 });
 
+// GET /api/sessions/:name/cwd — the working folder of the session's active pane, where the file panel opens.
+app.get('/api/sessions/:name/cwd', async (req, res) => {
+  const { name } = req.params;
+  if (!NAME_RE.test(name)) return res.status(400).json({ error: 'Invalid name' });
+  // list-panes shows the session's current window; display-message would print nothing for a bad target.
+  try {
+    const out = await tmux(req.account, ['list-panes', '-t', `=${name}`, '-F', '#{pane_active}\t#{pane_current_path}']);
+    const active = out.split('\n').map((l) => l.split('\t')).find(([a]) => a === '1');
+    res.json({ path: (active && active[1]) || req.account.home });
+  } catch (err) { res.status(500).json({ error: err.stderr || err.message }); }
+});
+
 app.delete('/api/sessions/:name', async (req, res) => {
   const { name } = req.params;
   if (!NAME_RE.test(name)) return res.status(400).json({ error: 'Invalid name' });
@@ -415,7 +429,8 @@ app.delete('/api/sessions/:name', async (req, res) => {
 function filesError(res, err, what) {
   const status = filesStatus(err);
   if (status === 500) console.warn(`files ${what}: ${err.message}`);
-  const text = { 404: 'Not found', 403: 'Permission denied', 409: 'A file with that name already exists', 400: 'Not a file' }[status]
+  const text = { EISDIR: 'Not a file', EXDEV: 'Can\'t move between drives', ENOTEMPTY: 'Folder is not empty', EBUSY: 'File is in use' }[err.code]
+    || { 404: 'Not found', 403: 'Permission denied', 409: 'A file with that name already exists', 400: 'Not allowed' }[status]
     || 'File operation failed';
   res.status(status).json({ error: text, code: err.code });
 }
@@ -458,6 +473,42 @@ app.get('/api/files/download', async (req, res) => {
     console.warn(`files read ${file}: ${err.message}`);
     res.destroy(); // a truncated download must not look complete
   }
+});
+
+// POST /api/files/mkdir?path=/abs/dir — create a folder, with missing parents. An existing folder is fine.
+app.post('/api/files/mkdir', async (req, res) => {
+  const dir = filePath(req.query.path);
+  if (!dir || dir === '/') return res.status(400).json({ error: 'Bad folder name' });
+  try {
+    await runFiles(req.account, ['mkdir', dir], { timeout: 15000 });
+    console.log(`mkdir ${req.account.name}:${dir} by ${req.email}`);
+    res.status(201).json({ path: dir });
+  } catch (err) { filesError(res, err, `mkdir ${dir}`); }
+});
+
+// POST /api/files/rename?from=/abs/a&to=/abs/b — rename or move a file or folder. Never replaces what's at `to`.
+app.post('/api/files/rename', async (req, res) => {
+  const from = filePath(req.query.from);
+  const to = filePath(req.query.to);
+  const name = to && path.posix.basename(to);
+  if (!from || !to || from === '/' || to === '/' || !FILENAME_RE.test(name) || name === '.' || name === '..') return res.status(400).json({ error: 'Bad path or name' });
+  if (to === from || to.startsWith(from + '/')) return res.status(400).json({ error: 'Can\'t move a folder into itself' });
+  try {
+    await runFiles(req.account, ['rename', from, to], { timeout: 15000 });
+    console.log(`rename ${req.account.name}:${from} -> ${to} by ${req.email}`);
+    res.json({ path: to });
+  } catch (err) { filesError(res, err, `rename ${from}`); }
+});
+
+// DELETE /api/files?path=/abs/x — delete a file, or a folder with everything in it. Home and / are refused.
+app.delete('/api/files', async (req, res) => {
+  const file = filePath(req.query.path);
+  if (!file || file === '/' || file === req.account.home) return res.status(400).json({ error: 'Not allowed' });
+  try {
+    await runFiles(req.account, ['delete', file], { timeout: 60000 });
+    console.log(`delete ${req.account.name}:${file} by ${req.email}`);
+    res.status(204).end();
+  } catch (err) { filesError(res, err, `delete ${file}`); }
 });
 
 // POST /api/files/upload?dir=/abs/dir&name=file.png[&overwrite=1] — the raw request body becomes that file.

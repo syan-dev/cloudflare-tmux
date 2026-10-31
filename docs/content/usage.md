@@ -21,7 +21,8 @@ Sessions have links: `https://term.example.com/#/s/work` opens the session `work
 
 ## Terminal
 
-- **← Sessions** goes back to the dashboard. The session keeps running.
+- **Sessions** at the top left, or **✕** on the terminal's tab, goes back to the dashboard. The session keeps
+  running.
 - If the connection drops, after a Wi-Fi change or laptop sleep, the page **reconnects by itself**. If your
   Access login has expired, it reloads so you can sign in again.
 - Several tabs or devices can attach to the same session at once. They all see the same screen, which is
@@ -42,26 +43,54 @@ goes one way: nothing in the terminal can read your clipboard. This needs tmux 3
 
 ## Files
 
-Press **Files** in the terminal bar to open the file panel. It shows your home folder.
+The terminal page is laid out like VS Code in the browser. A bar of icons runs down the left. Press the
+**Explorer** icon, the two pages, to open your files beside the terminal. On a phone, press **Files** at the
+top right instead. The Explorer opens in the folder the terminal is in.
 
-![The file panel next to a terminal, after pasting a screenshot](assets/img/files.png)
+![The Explorer next to a terminal, after pasting a screenshot](assets/img/files.png)
 
-- **Open a folder**: click its name. **↑** goes up one level, **~** returns home. Dotfiles are hidden until
-  you press **.\***.
-- **Download**: click a file's name.
-- **Upload**: press **Upload**, or drag files from your computer anywhere onto the terminal. They land in the
-  folder the panel shows. If a file with the same name exists, you're asked before it's replaced.
-- **Paste an image**: copy an image or a screenshot, then paste into the terminal with **Ctrl+Shift+V**
-  (Mac: **Cmd+V**). It's saved as `pasted-<date>-<time>.png` in the current folder. Pasted text still goes to
-  the terminal as usual.
-- **path**: types the file's path into the terminal, quoted if needed, so you can pass it to a command.
-  After an upload, the message in the corner has the same button.
+### Browse
 
-The panel runs as your Linux user, so you see exactly what `ls` would show you. Uploads are limited to
+- Click a folder to expand it in place, as in VS Code. Click it again to fold it.
+- The path above the tree shows the current root. Click any part of it, or **↑**, to go up.
+- **⋯** at the top has **Show hidden files**, **Home folder**, **The terminal's folder** and **Open folder…**.
+- Double-click a file, or press Enter on it, to download it.
+- Hover a row for two buttons. The terminal icon types the path into the terminal, quoted if needed. **⋯**
+  opens the row's menu. Dragging a row onto the terminal also types its path.
+- The keyboard works as in VS Code: arrow keys move and fold, **F2** renames, **Delete** deletes.
+
+### Rename, move, delete
+
+Right-click a row, or press its **⋯**, for a menu. On a phone the menu slides up from the bottom.
+
+- **Rename…** turns the name into a text box. Enter saves, Escape cancels.
+- **Move** by dragging a row onto a folder, onto a part of the path, or onto **↑**. The message in the corner
+  has an **Undo** button. **Move to…** asks for a folder instead, for phones and far-away folders.
+- **Delete** always asks first, in a dialog that names the file. For a folder it says "and everything in it".
+  **Cancel** is selected, so pressing Enter or Escape keeps the file. There is no trash, so a delete is final.
+
+Nothing ever replaces an existing file. A move onto a name that exists is refused.
+
+### Upload
+
+There are four ways in.
+
+1. **Paste a screenshot.** Copy an image, then paste with **Ctrl+Shift+V** (Mac: **Cmd+V**) anywhere on the
+   page. It is saved as `pasted-<date>-<time>.png` in the Explorer's folder and its path is typed into the
+   terminal, ready for the command you are writing. Pasted text still goes to the terminal as usual.
+2. **Drop on the terminal.** Drag files or folders from your computer onto the terminal. They upload and their
+   paths are typed, as in VS Code.
+3. **Drop on the Explorer.** Drag onto the tree to upload without typing anything. Drop onto a folder to
+   upload into that folder.
+4. **Use the buttons.** The upload arrow at the top of the Explorer picks files from your device. On a phone a
+   clipboard button also appears. It uploads a copied photo, because phones rarely pass images to a paste.
+
+The buttons upload into the selected folder, or the root when nothing is selected. A message in the corner
+shows progress, a thumbnail for images, and **Cancel**. When a file with the same name exists, it asks
+whether to **Replace** it, **Keep both** as `name (2).ext`, or **Skip**. Dropped folders keep their structure.
+
+The Explorer runs as your Linux user, so you see exactly what `ls` would show you. Uploads are limited to
 `MAX_UPLOAD_MB`, 100 MB by default, which is also what Cloudflare's free plan allows per request.
-Folders can't be uploaded, only files.
-
-On a phone the panel covers the terminal. Close it with **✕** or by pressing **path**.
 
 ## Mobile key bar
 

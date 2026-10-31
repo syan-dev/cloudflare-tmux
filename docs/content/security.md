@@ -60,7 +60,7 @@ and guessing is rate-limited. See [Two-step code](two-step.md).
 
 - tmux runs through `setpriv`, so each person's processes have their own uid, gid and groups, and a clean
   environment.
-- The [file panel](usage.md#files) works the same way. Listing, downloading and uploading run in a helper
+- The [file panel](usage.md#files) works the same way. Listing, downloading, uploading, creating folders, renaming and deleting run in a helper
   started through `setpriv` as the person, never as root, so the kernel decides what they may read and write.
   A person can reach exactly the files their shell can reach, and nothing more.
 - The root service runs only **root-owned** code from `/opt/cloudflare-tmux`. No user can change what root

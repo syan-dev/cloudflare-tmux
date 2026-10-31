@@ -99,6 +99,11 @@ async function main() {
       ws.on('error', reject);
     }), /403/, 'cross-origin ws refused');
 
+    // The file panel opens where the terminal is working.
+    const cwd = await (await fetch(`${base}/api/sessions/${SESSION}/cwd`)).json();
+    assert.strictEqual(cwd.path, require('os').homedir(), 'new session works in home');
+    assert.strictEqual((await fetch(`${base}/api/sessions/no-such-session/cwd`)).status, 500, 'cwd of a missing session fails');
+
     res = await fetch(`${base}/api/sessions/${SESSION}`, { method: 'DELETE', headers: { Origin: base } });
     assert.strictEqual(res.status, 204, 'kill session');
     assert.ok(!tmuxHas(SESSION), 'session gone after kill');
@@ -134,6 +139,40 @@ async function main() {
     assert.strictEqual(await res.text(), 'again\n', 'downloaded content');
     assert.strictEqual((await fetch(`${base}/api/files/download?path=${encodeURIComponent(dir)}`)).status, 400, 'downloading a directory refused');
     assert.strictEqual((await fetch(`${base}/api/files/download?path=${encodeURIComponent(path.join(dir, 'nope'))}`)).status, 404, 'missing file -> 404');
+    // Folders: created with parents, for dropped folders and the "+ Folder" button.
+    const mkdir = (p) => fetch(`${base}/api/files/mkdir?path=${encodeURIComponent(p)}`, { method: 'POST', headers: { Origin: base } });
+    assert.strictEqual((await mkdir(path.join(dir, 'sub', 'deep'))).status, 201, 'mkdir with parents');
+    assert.ok(fs.statSync(path.join(dir, 'sub', 'deep')).isDirectory(), 'folder exists');
+    assert.strictEqual((await mkdir(path.join(dir, 'sub', 'deep'))).status, 201, 'mkdir of an existing folder is fine');
+    assert.strictEqual((await mkdir(path.join(dir, 'a.txt'))).status, 409, 'mkdir over a file refused');
+    assert.strictEqual((await mkdir('relative')).status, 400, 'relative mkdir refused');
+    assert.strictEqual((await mkdir('/')).status, 400, 'mkdir of / refused');
+    assert.strictEqual((await fetch(`${base}/api/files/mkdir?path=${encodeURIComponent(path.join(dir, 'x'))}`, { method: 'POST' })).status, 403, 'mkdir without Origin refused');
+    // Rename and move: never over something that exists, never into itself.
+    const rename = (from, to) => fetch(`${base}/api/files/rename?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { method: 'POST', headers: { Origin: base } });
+    assert.strictEqual((await rename(path.join(dir, 'a.txt'), path.join(dir, 'b.txt'))).status, 200, 'rename');
+    assert.ok(!fs.existsSync(path.join(dir, 'a.txt')) && fs.existsSync(path.join(dir, 'b.txt')), 'renamed on disk');
+    assert.strictEqual((await rename(path.join(dir, 'b.txt'), path.join(dir, 'sub', 'b.txt'))).status, 200, 'move into a folder');
+    assert.ok(fs.existsSync(path.join(dir, 'sub', 'b.txt')), 'moved on disk');
+    fs.writeFileSync(path.join(dir, 'c.txt'), 'c');
+    assert.strictEqual((await rename(path.join(dir, 'c.txt'), path.join(dir, 'sub', 'b.txt'))).status, 409, 'move over an existing file refused');
+    assert.strictEqual(fs.readFileSync(path.join(dir, 'sub', 'b.txt'), 'utf8'), 'again\n', 'existing file untouched');
+    assert.strictEqual((await rename(path.join(dir, 'sub'), path.join(dir, 'sub', 'deep', 'sub'))).status, 400, 'folder into itself refused');
+    assert.strictEqual((await rename(path.join(dir, 'c.txt'), '/')).status, 400, 'bad target refused');
+    assert.strictEqual((await rename(path.join(dir, 'nope'), path.join(dir, 'x'))).status, 404, 'rename of a missing file -> 404');
+    assert.strictEqual((await fetch(`${base}/api/files/rename?from=${encodeURIComponent(path.join(dir, 'c.txt'))}&to=${encodeURIComponent(path.join(dir, 'd.txt'))}`, { method: 'POST' })).status, 403, 'rename without Origin refused');
+    // Delete: files, folders with contents, never home.
+    const del = (p, headers = { Origin: base }) => fetch(`${base}/api/files?path=${encodeURIComponent(p)}`, { method: 'DELETE', headers });
+    assert.strictEqual((await del(path.join(dir, 'c.txt'))).status, 204, 'delete a file');
+    assert.ok(!fs.existsSync(path.join(dir, 'c.txt')), 'file gone');
+    assert.strictEqual((await del(path.join(dir, 'sub'))).status, 204, 'delete a folder with contents');
+    assert.ok(!fs.existsSync(path.join(dir, 'sub')), 'folder gone');
+    assert.strictEqual((await del(path.join(dir, 'sub'))).status, 404, 'delete of a missing path -> 404');
+    assert.strictEqual((await del(require('os').homedir())).status, 400, 'deleting home refused');
+    assert.strictEqual((await del(require('os').homedir() + '/')).status, 400, 'deleting home with a trailing slash refused');
+    assert.strictEqual((await del(require('os').homedir() + '/x/..//')).status, 400, 'deleting home by a roundabout path refused');
+    assert.strictEqual((await del('/')).status, 400, 'deleting / refused');
+    assert.strictEqual((await del(dir, {})).status, 403, 'delete without Origin refused');
     fs.rmSync(dir, { recursive: true });
   } finally {
     srv.kill();
