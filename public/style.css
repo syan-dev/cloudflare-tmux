@@ -1,7 +1,7 @@
 /* VS Code "Dark Modern" palette, the look of github.dev. */
 :root {
   --bg: #1f1f1f;          /* editor */
-  --side: #181818;        /* sidebar, title bar, status bar, activity bar */
+  --side: #181818;        /* top bars and the file panel */
   --border: #2b2b2b;
   --border-strong: #454545;
   --text: #cccccc;
@@ -46,12 +46,6 @@ input::placeholder { color: var(--dim); }
 .titlebar { display: flex; align-items: center; gap: 12px; height: 35px; padding: 0 12px; background: var(--side);
   border-bottom: 1px solid var(--border); flex: 0 0 auto; }
 .titlebar .title { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-/* The command center: VS Code's boxed title in the middle of the title bar. */
-#terminal-view .titlebar .title { flex: 0 1 520px; margin: 0 auto; height: 24px; line-height: 22px; padding: 0 12px;
-  border: 1px solid var(--border-strong); border-radius: 6px; background: #222; font-size: 12px; }
-#terminal-view .titlebar .back { flex: 1 1 0; }
-#terminal-view .titlebar .tb-right { flex: 1 1 0; display: flex; justify-content: flex-end; }
-.titlebar .title b { color: var(--text); font-weight: 600; font-family: var(--mono); }
 .titlebar .mark { display: flex; align-items: center; gap: 8px; color: var(--text); font-weight: 600; white-space: nowrap; }
 .titlebar .mark svg { color: var(--accent); }
 .titlebar .me { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -80,32 +74,35 @@ input::placeholder { color: var(--dim); }
 .dot.on { background: var(--ok); }
 #empty { padding: 24px; text-align: center; }
 
-/* ---- terminal view: the workbench ---- */
+/* ---- terminal view: one top bar, the file panel, a splitter, the terminal ---- */
 #terminal-view { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
-.workbench { flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; }
-.activity { width: 48px; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; padding: 4px 0;
-  background: var(--side); border-right: 1px solid var(--border); }
-.activity .act { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border: 0; background: none;
-  color: var(--dim); border-left: 2px solid transparent; border-radius: 0; padding: 0; }
-.activity .act:hover { color: var(--text); background: none; }
-.activity .act.active { color: #fff; border-left-color: var(--accent); }
-.activity .spacer { flex: 1; }
-.editor { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-.tabs { display: flex; height: 35px; background: var(--side); flex: 0 0 auto; }
-.tab { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 10px; height: 35px; min-width: 120px; max-width: 260px;
-  background: var(--bg); color: #fff; border-top: 1px solid var(--accent); border-right: 1px solid var(--border); font-size: 13px; }
-.tab > svg { color: var(--muted); flex: 0 0 auto; }
-.tab #tab-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tab-close { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; color: var(--text); }
-.tab-close:hover { background: rgba(255,255,255,.1); }
-.tabs-fill { flex: 1; border-bottom: 1px solid var(--border); }
-#terminal { flex: 1; min-width: 0; min-height: 0; padding: 6px 0 0 12px; background: var(--bg); }
-.status { font-size: 12px; }
-.status.ok { color: var(--ok); }
-.status.bad { color: var(--warn); }
+.topbar { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 6px; background: var(--side);
+  border-bottom: 1px solid var(--border); flex: 0 0 auto; min-width: 0; }
+.tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border: 0; border-radius: 4px;
+  background: none; color: var(--muted); text-decoration: none; white-space: nowrap; flex: 0 0 auto; }
+.tb-btn:hover { background: rgba(255,255,255,.08); color: var(--text); }
+.tb-btn.active { color: #fff; background: rgba(255,255,255,.12); }
+.crumb-sep { color: var(--dim); }
+.term-name { font-family: var(--mono); font-weight: 600; color: var(--text); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--warn); white-space: nowrap; margin-left: 4px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: 0 0 auto; }
+.status.ok::before { background: var(--ok); }
+.status.bad::before { background: var(--warn); }
+.workbench { --side-w: 280px; flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; }
+.editor { flex: 1; min-width: 0; min-height: 0; position: relative; display: flex; }
+#terminal { flex: 1; min-width: 0; min-height: 0; padding: 6px 0 0 10px; background: var(--bg); }
+
+/* The splitter: a 4 px handle over the panel's edge that lights up on hover, as in VS Code. */
+.sash { width: 4px; margin: 0 -2px; flex: 0 0 auto; position: relative; z-index: 4; cursor: col-resize; touch-action: none; }
+.sash::after { content: ""; position: absolute; inset: 0; background: transparent; transition: background .1s .15s; }
+.sash:hover::after, .sash:focus-visible::after, body.resizing .sash::after { background: var(--accent); }
+.sash:focus-visible { outline: none; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing #terminal, body.resizing .sidebar { pointer-events: none; }
 
 /* ---- sidebar: the explorer ---- */
-.sidebar { width: 300px; flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; background: var(--side);
+.sidebar { width: var(--side-w); flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; background: var(--side);
   border-right: 1px solid var(--border); }
 .side-head { display: flex; align-items: center; gap: 2px; height: 35px; padding: 0 8px 0 20px; flex: 0 0 auto; }
 .side-title { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text); }
@@ -147,30 +144,12 @@ input::placeholder { color: var(--dim); }
 .tree li.empty:hover, .tree li.loading:hover { background: none; }
 .sidebar.drop-here { box-shadow: inset 0 0 0 2px var(--accent); }
 .side-root [data-dir].drop-here, .side-head [data-dir].drop-here { box-shadow: 0 0 0 2px var(--accent); border-radius: 3px; color: var(--text); }
-.files-hint { margin: 0; padding: 8px 12px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.5; flex: 0 0 auto; }
 
 /* ---- drop overlay over the terminal ---- */
 .drop { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(0,120,212,.16);
   border: 2px dashed var(--accent); pointer-events: none; text-align: center; padding: 16px; font-size: 15px; color: #fff; }
 .drop > div { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .drop code { font-family: var(--mono); font-size: 13px; background: rgba(0,0,0,.45); padding: 2px 6px; border-radius: 3px; }
-@media (min-width: 721px) {
-  .drop { left: 48px; }
-  .workbench:has(.sidebar:not([hidden])) .drop { left: 348px; }
-}
-
-/* ---- status bar ---- */
-/* Blue across the width with a green remote badge, as github.dev shows it. */
-.statusbar { display: flex; align-items: stretch; height: 22px; background: #007acc; font-size: 12px; color: #fff;
-  flex: 0 0 auto; overflow: hidden; }
-.statusbar .sb { display: flex; align-items: center; gap: 5px; padding: 0 8px; white-space: nowrap; }
-.statusbar .sb.remote { background: #16825d; color: #fff; padding: 0 10px; }
-.statusbar .sb.dim { color: rgba(255,255,255,.9); }
-.statusbar .status { padding: 0 8px; display: flex; align-items: center; gap: 6px; color: #fff; }
-.statusbar .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.6); }
-.statusbar .status.ok::before { background: #fff; }
-.statusbar .status.bad { background: #c72e2e; }
-.statusbar .status.bad::before { background: #fff; }
 
 /* ---- context menu ---- */
 .menu { position: fixed; z-index: 20; min-width: 190px; display: grid; padding: 4px 0; background: var(--bg);
@@ -195,7 +174,7 @@ input::placeholder { color: var(--dim); }
 .menu.sheet hr { border-top-color: var(--input-border); margin: 6px 0; }
 
 /* ---- notifications ---- */
-.toasts { position: fixed; right: 12px; bottom: 34px; z-index: 10; display: grid; gap: 8px; width: min(400px, calc(100vw - 24px)); }
+.toasts { position: fixed; right: 12px; bottom: 12px; z-index: 10; display: grid; gap: 8px; width: min(400px, calc(100vw - 24px)); }
 .toast { background: #252526; border: 1px solid var(--border-strong); border-radius: 4px; padding: 10px 12px; font-size: 13px;
   display: grid; gap: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.5); }
 .toast.bad { border-left: 3px solid var(--danger); }
@@ -212,21 +191,19 @@ input::placeholder { color: var(--dim); }
 .keys { display: none; gap: 4px; padding: 6px; background: var(--side); border-top: 1px solid var(--border); overflow-x: auto; flex: 0 0 auto; }
 .keys button { height: 30px; padding: 0 10px; font-family: var(--mono); flex: 0 0 auto; }
 .keys button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-@media (pointer: coarse) { .keys { display: flex; } }
+@media (pointer: coarse) { .keys { display: flex; } .toasts { bottom: 56px; } }
 
-/* ---- narrow screens: the sidebar covers the terminal, the activity bar goes ---- */
-.titlebar .files-btn { display: none; }
+/* ---- narrow screens: the file panel covers the terminal, no splitter ---- */
 /* Ctrl+V / Cmd+V paste an image anywhere on a computer. Phones rarely put images in paste events, so they
    get a button that reads the clipboard directly. */
 #files-paste { display: none; }
 @media (max-width: 720px), (pointer: coarse) { #files-paste { display: inline-flex; } }
 @media (max-width: 720px) {
-  .activity { display: none; }
-  .titlebar .files-btn { display: inline-flex; }
-  .titlebar .title { text-align: left; }
+  .tb-btn .tb-label { display: none; }
+  .tb-btn { padding: 0 6px; }
   .sidebar { position: absolute; inset: 0; width: auto; border-right: 0; z-index: 8; }
+  .sash { display: none; }
   .side-close { display: inline-flex; }
-  .statusbar .sb.hint { display: none; }
   .wrap { padding: 16px; }
 }
 

@@ -14,10 +14,10 @@
   *Keep both* or *Skip*. The progress message shows a thumbnail and can cancel. New *Paste* and *+ Folder*
   buttons read the clipboard directly and create folders, and a panel row can be dragged onto the terminal
   to type its path.
-- **The terminal page looks like VS Code in the browser**: a title bar with the session in the middle, an icon
-  bar on the left, an Explorer tree with folders that expand in place and file-type icons, the terminal as an
-  editor tab, a status bar, and VS Code's dark colors in the terminal too. On a phone the Explorer covers the
-  terminal and menus slide up from the bottom.
+- **A simpler terminal page.** One slim bar on top holds the session name, a connection dot, *Files* and log
+  out. The icon bar, the tab strip and the status bar are gone, so the terminal gets the room. The file panel
+  has a splitter: drag it to resize, double-click to reset, or use the arrow keys. The width is remembered. On
+  a phone the panel covers the terminal and menus slide up from the bottom.
 - **Rename, move and delete** in the file panel. Right-click a row or press *⋯* for a menu with *Download*,
   *Insert path*, *Copy path*, *Rename*, *Move to…* and *Delete*. Rename is inline. Drag a row onto a folder,
   a path crumb or *↑* to move it, with *Undo* in the corner. Delete asks in a dialog with Cancel selected, and

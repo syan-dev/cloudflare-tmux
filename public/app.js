@@ -51,7 +51,7 @@ function renderMe() {
   const u = document.createElement('b');
   u.textContent = me.user;
   el.append(u, ` · ${me.email}`);
-  $('sb-user').textContent = `${me.user} · ${me.email}`;
+  $('term-logout').title = `Log out ${me.user} · ${me.email}`;
 }
 
 // ---------- dashboard ----------
@@ -122,8 +122,10 @@ $('new-form').addEventListener('submit', async (e) => {
 
 // ---------- terminal ----------
 
+// A dot beside the session name. Only trouble gets words: "connected" is the normal state.
 function setStatus(text, cls) {
-  $('status').textContent = text;
+  $('status').textContent = cls === 'ok' ? '' : text;
+  $('status').title = text;
   $('status').className = 'status ' + (cls || '');
 }
 
@@ -229,7 +231,6 @@ function openSession(name) {
   currentSession = name;
   document.title = `${name} · cloudflare-tmux`;
   $('term-name').textContent = name;
-  $('tab-name').textContent = `${name} · tmux`;
   ensureTerminal();
   term.reset();
   files.dir = null; // the panel opens where this session's terminal is working
@@ -308,7 +309,9 @@ function filesVisible() { return !$('files').hidden; }
 function showFiles(on, remember = true) {
   $('files').hidden = !on;
   $('files-btn').classList.toggle('active', on);
-  $('files-btn-m').classList.toggle('active', on);
+  $('files-btn').setAttribute('aria-pressed', String(on));
+  $('sash').hidden = !on;
+  if (on && isWide()) setSideWidth(Number(store.get('files-width')) || SIDE_DEFAULT);
   if (remember) store.set('files-open', on ? '1' : '0');
   if (fit && currentSession) fit.fit();
   if (on && !files.dir) loadTerminalDir();
@@ -673,6 +676,7 @@ async function newFolder(dir) {
 function headerMenu() {
   return [
     ['Show hidden files', () => { files.hidden = !files.hidden; store.set('files-hidden', files.hidden ? '1' : '0'); renderFiles(); }, files.hidden ? 'checked' : ''],
+    ['Collapse folders', () => { files.open.clear(); renderFiles(); }],
     null,
     ['Home folder', () => loadFiles(null)],
     ['The terminal\'s folder', () => loadTerminalDir()],
@@ -837,16 +841,76 @@ async function pasteClipboard() {
 }
 
 $('files-btn').onclick = () => showFiles(!filesVisible());
-$('files-btn-m').onclick = () => showFiles(!filesVisible());
 $('files-close').onclick = () => showFiles(false);
 $('files-refresh').onclick = () => refreshFiles();
-$('files-collapse').onclick = () => { files.open.clear(); renderFiles(); };
 $('files-up').onclick = () => { if (files.dir && files.dir !== '/') loadFiles(parentOf(files.dir)); };
 $('files-more').onclick = (ev) => { const r = ev.currentTarget.getBoundingClientRect(); showMenu(r.right, r.bottom + 2, headerMenu(), { right: true }); };
 $('files-upload').onclick = () => $('files-input').click();
 $('files-input').onchange = () => { uploadAll(asItems($('files-input').files), { dir: contextDir() }); $('files-input').value = ''; };
 $('files-paste').onclick = pasteClipboard;
 $('files-mkdir').onclick = () => { if (files.dir) newFolder(contextDir()); };
+
+// ---- the splitter between the file panel and the terminal ----
+// Drag it, or focus it and use the arrow keys. Double-click puts the default width back. The width is
+// remembered per browser and kept so the terminal never gets narrower than MIN_TERM.
+const SIDE_DEFAULT = 280;
+const SIDE_MIN = 180;
+const MIN_TERM = 320;
+
+function sideWidth(w) {
+  const avail = $('workbench').clientWidth; // 0 while the terminal view is hidden
+  const max = avail ? Math.max(SIDE_MIN, avail - MIN_TERM) : Infinity;
+  return Math.round(Math.min(Math.max(w, SIDE_MIN), max));
+}
+
+let fitFrame = 0;
+function refit() {
+  cancelAnimationFrame(fitFrame);
+  fitFrame = requestAnimationFrame(() => { if (fit && currentSession) fit.fit(); });
+}
+
+function setSideWidth(w, remember = false) {
+  const width = sideWidth(w);
+  $('workbench').style.setProperty('--side-w', `${width}px`);
+  $('sash').setAttribute('aria-valuenow', String(width));
+  if (remember) store.set('files-width', String(width));
+  refit();
+}
+
+setSideWidth(Number(store.get('files-width')) || SIDE_DEFAULT);
+window.addEventListener('resize', () => { if (filesVisible() && isWide()) setSideWidth($('files').getBoundingClientRect().width); });
+
+$('sash').addEventListener('pointerdown', (ev) => {
+  if (ev.button !== 0) return;
+  ev.preventDefault();
+  const sash = $('sash');
+  const left = $('files').getBoundingClientRect().left;
+  sash.setPointerCapture(ev.pointerId);
+  document.body.classList.add('resizing');
+  const move = (e) => setSideWidth(e.clientX - left);
+  const up = (e) => {
+    sash.removeEventListener('pointermove', move);
+    sash.removeEventListener('pointerup', up);
+    sash.removeEventListener('pointercancel', up);
+    document.body.classList.remove('resizing');
+    setSideWidth(e.clientX - left, true);
+  };
+  sash.addEventListener('pointermove', move);
+  sash.addEventListener('pointerup', up);
+  sash.addEventListener('pointercancel', up);
+});
+$('sash').addEventListener('dblclick', () => setSideWidth(SIDE_DEFAULT, true));
+$('sash').addEventListener('keydown', (ev) => {
+  const step = ev.shiftKey ? 64 : 16;
+  const now = $('files').getBoundingClientRect().width;
+  if (ev.key === 'ArrowLeft') setSideWidth(now - step, true);
+  else if (ev.key === 'ArrowRight') setSideWidth(now + step, true);
+  else if (ev.key === 'Home') setSideWidth(SIDE_MIN, true);
+  else if (ev.key === 'End') setSideWidth(Infinity, true);
+  else if (ev.key === 'Enter') setSideWidth(SIDE_DEFAULT, true);
+  else return;
+  ev.preventDefault();
+});
 
 // Everything in a drop as { file, rel }, walking into dropped folders. Empty folders come back as { dir: rel }.
 async function droppedItems(dt) {

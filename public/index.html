@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#181818">
   <title>cloudflare-tmux</title>
   <link rel="stylesheet" href="/vendor/xterm/css/xterm.css">
-  <link rel="stylesheet" href="/style.css?v=12">
+  <link rel="stylesheet" href="/style.css?v=13">
 </head>
 <body>
   <!-- Icons used more than once, drawn in the style of VS Code's codicons. -->
@@ -20,7 +20,6 @@
       <symbol id="i-upload" viewBox="0 0 16 16"><path fill="currentColor" d="M8.5 2.8l3.6 3.6-.7.7L8.5 4.2V11h-1V4.2L4.6 7.1l-.7-.7L7.5 2.8zM3 12h10v1H3z"/></symbol>
       <symbol id="i-paste" viewBox="0 0 16 16"><path fill="currentColor" d="M10 2h-.6A2 2 0 0 0 7.5 1h-1a2 2 0 0 0-1.9 1H4l-1 1v10l1 1h8l1-1V3zm-4-.1a1 1 0 0 1 1.2 0 .5.5 0 0 0 .3.1h.5a1 1 0 0 1 1 1H5a1 1 0 0 1 1-1zM12 13H4V3h.6a2 2 0 0 0 .4.5V4h4v-.5a2 2 0 0 0 .4-.5h.6z"/></symbol>
       <symbol id="i-refresh" viewBox="0 0 16 16"><path fill="currentColor" d="M13.5 2.5l-.5.5v2.3A6 6 0 0 0 2 8h1a5 5 0 0 1 9.3-2.5H10v1h3.5l.5-.5V3zM2.5 13.5l.5-.5v-2.3A6 6 0 0 0 14 8h-1a5 5 0 0 1-9.3 2.5H6v-1H2.5l-.5.5V13z"/></symbol>
-      <symbol id="i-collapse" viewBox="0 0 16 16"><path fill="currentColor" d="M9 9H4v1h5zM3 2.5l.5-.5h9l.5.5v9l-.5.5h-9l-.5-.5zm1 .5v8h8V3z"/><path fill="currentColor" d="M1 4h1v9h9v1H1.5l-.5-.5z"/></symbol>
       <symbol id="i-more" viewBox="0 0 16 16"><path fill="currentColor" d="M4 8a1.2 1.2 0 1 1-2.4 0A1.2 1.2 0 0 1 4 8zm5.2 0a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0zm5.2 0a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z"/></symbol>
       <symbol id="i-close" viewBox="0 0 16 16"><path fill="currentColor" d="M8 8.7l-4 4-.7-.7 4-4-4-4 .7-.7 4 4 4-4 .7.7-4 4 4 4-.7.7z"/></symbol>
       <symbol id="i-up" viewBox="0 0 16 16"><path fill="currentColor" d="M8 3l4.5 4.5-.7.7L8.5 4.9V13h-1V4.9L4.2 8.2l-.7-.7z"/></symbol>
@@ -75,27 +74,24 @@
   </section>
 
   <section id="terminal-view" hidden>
-    <header class="titlebar">
-      <a href="#/" class="back" title="Back to sessions (the session keeps running)"><svg width="16" height="16"><use href="#i-sessions"/></svg><span>Sessions</span></a>
-      <span class="title"><b id="term-name"></b> — cloudflare-tmux</span>
-      <span class="tb-right"><button id="files-btn-m" class="btn files-btn" title="Files: browse, upload, download">Files</button></span>
+    <header class="topbar">
+      <a href="#/" class="tb-btn" title="All sessions (this one keeps running)"><svg width="16" height="16"><use href="#i-sessions"/></svg><span class="tb-label">Sessions</span></a>
+      <span class="crumb-sep">/</span>
+      <b id="term-name" class="term-name"></b>
+      <span id="status" class="status" role="status"></span>
+      <span class="spacer"></span>
+      <button id="files-btn" class="tb-btn" title="Files" aria-pressed="false"><svg width="16" height="16"><use href="#i-files"/></svg><span class="tb-label">Files</span></button>
+      <a id="term-logout" class="tb-btn" href="/cdn-cgi/access/logout" title="Log out"><svg width="16" height="16"><use href="#i-account"/></svg></a>
     </header>
-    <div class="workbench">
-      <nav class="activity" aria-label="Views">
-        <a href="#/" class="act" title="Sessions"><svg width="24" height="24"><use href="#i-sessions"/></svg></a>
-        <button id="files-btn" class="act" title="Explorer: your files"><svg width="24" height="24"><use href="#i-files"/></svg></button>
-        <span class="spacer"></span>
-        <a id="term-logout" class="act" href="/cdn-cgi/access/logout" title="Log out"><svg width="24" height="24"><use href="#i-account"/></svg></a>
-      </nav>
+    <div class="workbench" id="workbench">
       <aside id="files" class="sidebar" hidden>
         <div class="side-head">
-          <span class="side-title">Explorer</span>
+          <span class="side-title">Files</span>
           <button id="files-mkdir" class="icon" title="New folder"><svg width="16" height="16"><use href="#i-new-folder"/></svg></button>
           <button id="files-upload" class="icon" title="Upload files"><svg width="16" height="16"><use href="#i-upload"/></svg></button>
           <button id="files-paste" class="icon" title="Upload the image on the clipboard"><svg width="16" height="16"><use href="#i-paste"/></svg></button>
           <button id="files-refresh" class="icon" title="Refresh"><svg width="16" height="16"><use href="#i-refresh"/></svg></button>
-          <button id="files-collapse" class="icon" title="Collapse folders"><svg width="16" height="16"><use href="#i-collapse"/></svg></button>
-          <button id="files-more" class="icon" title="More: hidden files, home, the terminal's folder"><svg width="16" height="16"><use href="#i-more"/></svg></button>
+          <button id="files-more" class="icon" title="More"><svg width="16" height="16"><use href="#i-more"/></svg></button>
           <button id="files-close" class="icon side-close" title="Close"><svg width="16" height="16"><use href="#i-close"/></svg></button>
         </div>
         <div class="side-root">
@@ -104,16 +100,13 @@
         </div>
         <p id="files-error" class="error files-msg" hidden></p>
         <ul id="files-list" class="tree" tabindex="0" aria-label="Files"></ul>
-        <p class="files-hint">Drop files or folders here to upload. Drop or paste on the terminal to upload and type the path. Right-click a row to rename, move or delete.</p>
       </aside>
+      <div id="sash" class="sash" role="separator" aria-orientation="vertical" aria-label="Resize the file panel"
+           title="Drag to resize. Double-click to reset." tabindex="0" hidden></div>
       <div class="editor">
-        <div class="tabs" role="tablist">
-          <span class="tab active" role="tab" aria-selected="true"><svg width="16" height="16"><use href="#i-terminal"/></svg><span id="tab-name"></span><a href="#/" class="tab-close" title="Back to sessions (the session keeps running)" aria-label="Back to sessions"><svg width="16" height="16"><use href="#i-close"/></svg></a></span>
-          <span class="tabs-fill"></span>
-        </div>
         <div id="terminal"></div>
+        <div id="drop" class="drop" hidden><div><svg width="32" height="32"><use href="#i-upload"/></svg><span>Drop to upload to <code id="drop-dir"></code> and type the path</span></div></div>
       </div>
-      <div id="drop" class="drop" hidden><div><svg width="32" height="32"><use href="#i-upload"/></svg><span>Drop to upload to <code id="drop-dir"></code> and type the path</span></div></div>
     </div>
     <nav id="keys" class="keys">
       <button data-key="esc">Esc</button>
@@ -127,13 +120,6 @@
       <button data-key="|">|</button>
       <button data-key="~">~</button>
     </nav>
-    <footer class="statusbar">
-      <span class="sb remote"><svg width="14" height="14"><use href="#i-cloud"/></svg><span>cloudflare-tmux</span></span>
-      <span id="status" class="status"></span>
-      <span id="sb-user" class="sb dim"></span>
-      <span class="spacer"></span>
-      <span class="sb dim hint">Ctrl+Shift+V pastes · drop files to upload</span>
-    </footer>
     <input type="file" id="files-input" multiple hidden>
   </section>
   <div id="toasts" class="toasts"></div>
@@ -142,6 +128,6 @@
   <script src="/vendor/addon-fit/lib/addon-fit.js"></script>
   <script src="/vendor/addon-web-links/lib/addon-web-links.js"></script>
   <script src="/vendor/addon-clipboard/lib/addon-clipboard.js"></script>
-  <script src="/app.js?v=14"></script>
+  <script src="/app.js?v=15"></script>
 </body>
 </html>

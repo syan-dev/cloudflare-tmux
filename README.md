@@ -23,7 +23,7 @@
   <img src="docs/public/assets/img/dashboard.png" alt="The session dashboard" width="49%">
 </p>
 <p align="center">
-  <img src="docs/public/assets/img/files.png" alt="The Explorer beside the terminal: browse folders, download, upload by drag and drop, or paste a screenshot" width="80%">
+  <img src="docs/public/assets/img/files.png" alt="The file panel beside the terminal: browse folders, download, upload by drag and drop, or paste a screenshot" width="80%">
 </p>
 
 ## What you get
