@@ -20,7 +20,7 @@
   --mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 var(--font); }
+html, body { margin: 0; height: 100%; overscroll-behavior: none; background: var(--bg); color: var(--text); font: 13px/1.4 var(--font); }
 [hidden] { display: none !important; }
 .muted { color: var(--muted); }
 .error { color: var(--danger); }
@@ -75,7 +75,7 @@ input::placeholder { color: var(--dim); }
 #empty { padding: 24px; text-align: center; }
 
 /* ---- terminal view: one top bar, the file panel, a splitter, the terminal ---- */
-#terminal-view { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
+#terminal-view { position: fixed; top: 0; left: 0; right: 0; height: 100%; display: flex; flex-direction: column; background: var(--bg); }
 .topbar { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 6px; background: var(--side);
   border-bottom: 1px solid var(--border); flex: 0 0 auto; min-width: 0; }
 .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border: 0; border-radius: 4px;
@@ -91,7 +91,8 @@ input::placeholder { color: var(--dim); }
 .status.bad::before { background: var(--warn); }
 .workbench { --side-w: 280px; flex: 1; min-height: 0; display: flex; position: relative; overflow: hidden; }
 .editor { flex: 1; min-width: 0; min-height: 0; position: relative; display: flex; }
-#terminal { flex: 1; min-width: 0; min-height: 0; padding: 6px 0 0 10px; background: var(--bg); }
+/* touch-action: no page panning or pull to refresh under a finger. app.js turns swipes into scrolling. */
+#terminal { flex: 1; min-width: 0; min-height: 0; padding: 6px 0 0 10px; background: var(--bg); touch-action: none; }
 
 /* The splitter: a 4 px handle over the panel's edge that lights up on hover, as in VS Code. */
 .sash { width: 4px; margin: 0 -2px; flex: 0 0 auto; position: relative; z-index: 4; cursor: col-resize; touch-action: none; }

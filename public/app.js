@@ -156,6 +156,78 @@ function clipboardKeys(e) {
   return true;
 }
 
+// A swipe scrolls the terminal like a mouse wheel. xterm.js alone cannot do this under tmux:
+// tmux uses the alternate screen, which has no scrollback, and with `mouse on` xterm ignores touch.
+// So a vertical swipe becomes wheel events, which tmux, vim or less handle as they would on a desktop.
+function touchScroll() {
+  const el = term.element;
+  let lastY = null, x = 0, y = 0, acc = 0, dragging = false, velocity = 0, lastT = 0, fling = 0;
+  const appScrolls = () => term.modes.mouseTrackingMode !== 'none' || term.buffer.active.type === 'alternate';
+  const rowHeight = () => (el.querySelector('.xterm-screen')?.clientHeight || 0) / term.rows || 16;
+  // tmux scrolls 5 lines per wheel event, so take a wheel event every 2 rows of finger travel.
+  const step = () => rowHeight() * (term.modes.mouseTrackingMode !== 'none' ? 2 : 1);
+  const scroll = (dy) => {
+    acc += dy;
+    const s = step();
+    while (Math.abs(acc) >= s) {
+      const up = acc > 0; // the finger moved down: show earlier lines
+      acc -= up ? s : -s;
+      el.dispatchEvent(new WheelEvent('wheel', {
+        deltaY: up ? -1 : 1, deltaMode: WheelEvent.DOM_DELTA_LINE, clientX: x, clientY: y, bubbles: true, cancelable: true,
+      }));
+    }
+  };
+  // Touch events go to the node first touched, even after it leaves the page. xterm redraws rows
+  // as tmux scrolls, which detaches that node, so the move and end listeners sit on it directly.
+  let target = null;
+  const release = () => {
+    if (!target) return;
+    target.removeEventListener('touchmove', move);
+    target.removeEventListener('touchend', end);
+    target.removeEventListener('touchcancel', end);
+    target = null;
+  };
+  el.addEventListener('touchstart', (e) => {
+    cancelAnimationFrame(fling);
+    release();
+    if (e.touches.length !== 1 || !appScrolls()) { lastY = null; return; }
+    ({ clientX: x, clientY: y } = e.touches[0]);
+    lastY = y; acc = 0; velocity = 0; dragging = false; lastT = e.timeStamp;
+    target = e.target;
+    target.addEventListener('touchmove', move, { passive: false });
+    target.addEventListener('touchend', end, { passive: true });
+    target.addEventListener('touchcancel', end, { passive: true });
+  }, { capture: true, passive: true });
+  function move(e) {
+    if (lastY === null || e.touches.length !== 1) return;
+    // Claim every move at once. iOS Safari otherwise takes the first moves as a pull to refresh.
+    e.preventDefault();
+    e.stopPropagation(); // keep xterm from scrolling its own (empty) scrollback
+    const cy = e.touches[0].clientY;
+    // Ignore a finger that has barely moved, so a tap still focuses the terminal.
+    if (!dragging && Math.abs(cy - y) < 8) return;
+    dragging = true;
+    const dy = cy - lastY, dt = Math.max(1, e.timeStamp - lastT);
+    velocity = 0.8 * (dy / dt) + 0.2 * velocity;
+    lastY = cy; lastT = e.timeStamp;
+    scroll(dy);
+  }
+  function end() {
+    release();
+    if (lastY === null || !dragging) { lastY = null; return; }
+    lastY = null;
+    // A flick keeps scrolling and slows down, as a native list does.
+    let v = velocity * 16; // px per frame
+    const tick = () => {
+      if (Math.abs(v) < 0.5) return;
+      scroll(v);
+      v *= 0.95;
+      fling = requestAnimationFrame(tick);
+    };
+    fling = requestAnimationFrame(tick);
+  }
+}
+
 function ensureTerminal() {
   if (term) return;
   term = new Terminal({
@@ -181,6 +253,7 @@ function ensureTerminal() {
   }));
   term.attachCustomKeyEventHandler(clipboardKeys);
   term.open($('terminal'));
+  touchScroll();
   term.onData((data) => {
     if (ctrlArmed && data.length === 1) {
       const code = data.toUpperCase().charCodeAt(0);
@@ -879,6 +952,20 @@ function setSideWidth(w, remember = false) {
 
 setSideWidth(Number(store.get('files-width')) || SIDE_DEFAULT);
 window.addEventListener('resize', () => { if (filesVisible() && isWide()) setSideWidth($('files').getBoundingClientRect().width); });
+
+// iOS lays the on-screen keyboard over the page instead of shrinking it, so the prompt ends up behind the
+// keyboard. The visual viewport is the part still visible: fit the terminal page to it.
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const fitViewport = () => {
+    const view = $('terminal-view');
+    view.style.top = `${vv.offsetTop}px`;
+    view.style.height = `${vv.height}px`;
+    refit();
+  };
+  vv.addEventListener('resize', fitViewport);
+  vv.addEventListener('scroll', fitViewport);
+}
 
 $('sash').addEventListener('pointerdown', (ev) => {
   if (ev.button !== 0) return;
