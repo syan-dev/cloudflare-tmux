@@ -12,7 +12,6 @@ description: Every environment variable, flag and file cloudflare-tmux and its s
 - The multi-user service reads `/etc/cloudflare-tmux/env` instead. `install-system.sh` copies it there.
 - Real environment variables take priority over the file.
 - `ENV_FILE=/path` points the app and the scripts at a different file.
-- An older `.env` next to `server.js` still works. The setup scripts move it to the new location.
 
 | Variable | Default | Description |
 |---|---|---|

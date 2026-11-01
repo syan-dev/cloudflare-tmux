@@ -143,7 +143,7 @@ function hero(id) {
       <div class="lg:w-1/2">
         <p class="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">Cloudflare Tunnel · Zero Trust Access · tmux</p>
         <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl dark:text-white">Your tmux sessions,<br><span class="bg-gradient-to-r from-brand-500 to-amber-400 bg-clip-text text-transparent">in any browser.</span></h1>
-        <p class="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-300">Open a terminal on your server from your phone or laptop. Nothing is exposed to the internet. You sign in with your Cloudflare account, and your programs keep running when you close the tab.</p>
+        <p class="mt-6 text-lg leading-8 text-slate-600 dark:text-slate-300">Open a terminal on your server from your phone or laptop. Files sit beside it: drop them in, or paste a screenshot. Nothing is exposed to the internet. You sign in with your Cloudflare account, and your programs keep running when you close the tab.</p>
         <div class="mt-8 flex flex-wrap gap-3">
           <a href="${rel(id, 'quickstart')}" class="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600">Get started in 5 minutes →</a>
           <a href="${REPO}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">${ICONS.github} GitHub</a>
@@ -153,16 +153,9 @@ function hero(id) {
         <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950 shadow-2xl shadow-brand-500/10">
           <div class="flex items-center gap-1.5 border-b border-slate-800 px-4 py-3">
             <span class="h-3 w-3 rounded-full bg-red-500/80"></span><span class="h-3 w-3 rounded-full bg-yellow-500/80"></span><span class="h-3 w-3 rounded-full bg-green-500/80"></span>
-            <span class="ml-3 text-xs text-slate-500">term.example.com</span>
+            <span class="ml-3 text-xs text-slate-500">https://term.example.com</span>
           </div>
-          <pre class="overflow-x-auto p-5 text-[13px] leading-6 text-slate-300"><code><span class="text-slate-500">$</span> git clone ${REPO}
-<span class="text-slate-500">$</span> cd cloudflare-tmux
-<span class="text-slate-500">$</span> ./install.sh --host term.example.com
-<span class="text-green-400">  ✓</span> tunnel   cloudflare-tmux
-<span class="text-green-400">  ✓</span> access   Cloudflare login · you@example.com
-<span class="text-green-400">  ✓</span> dns      term.example.com → tunnel
-<span class="text-green-400">  ✓</span> services running, start on boot
-<span class="font-semibold text-brand-400">Done. Open https://term.example.com</span></code></pre>
+          <img src="${asset(id, 'assets/img/files.png')}" width="1000" height="520" class="block h-auto w-full" alt="The terminal in a browser, with the file panel open beside it">
         </div>
       </div>
     </div>
@@ -189,6 +182,7 @@ function layout({ id, meta, html, toc, titles, prev, next }) {
   <meta name="description" content="${esc(meta.description || '')}">
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(meta.description || '')}">
+  <meta property="og:image" content="https://syan-dev.github.io/cloudflare-tmux/assets/img/files.png">
   <link rel="icon" href="${asset(id, 'assets/favicon.svg')}" type="image/svg+xml">
   <link rel="stylesheet" href="${asset(id, 'assets/site.css')}">
   <script>

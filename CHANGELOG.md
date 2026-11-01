@@ -2,26 +2,27 @@
 
 ## Unreleased
 
-- **File panel**: press *Files* in the terminal to browse your folders, download a file, upload by dragging
-  files onto the terminal or with the *Upload* button, and paste a screenshot straight into the terminal to
-  save it as a file. A *path* button types a file's path into the terminal. Everything runs as the mapped
-  Linux user through `setpriv`, uploads are capped by `MAX_UPLOAD_MB` (100 MB, Cloudflare's free-plan limit)
-  and never replace a file without asking.
-- **Uploads work like VS Code.** A pasted image or a file dropped on the terminal is saved and its path is
-  typed into the terminal. Pasting works anywhere on the page, not only with the terminal focused. A drop on
-  the panel uploads into the folder under the pointer, folders upload with their structure, and the panel
-  opens in the folder the terminal is in, with a *⌖* button to get back there. Duplicates offer *Replace*,
-  *Keep both* or *Skip*. The progress message shows a thumbnail and can cancel. New *Paste* and *+ Folder*
-  buttons read the clipboard directly and create folders, and a panel row can be dragged onto the terminal
-  to type its path.
-- **A simpler terminal page.** One slim bar on top holds the session name, a connection dot, *Files* and log
-  out. The icon bar, the tab strip and the status bar are gone, so the terminal gets the room. The file panel
-  has a splitter: drag it to resize, double-click to reset, or use the arrow keys. The width is remembered. On
-  a phone the panel covers the terminal and menus slide up from the bottom.
-- **Rename, move and delete** in the file panel. Right-click a row or press *⋯* for a menu with *Download*,
-  *Insert path*, *Copy path*, *Rename*, *Move to…* and *Delete*. Rename is inline. Drag a row onto a folder,
-  a path crumb or *↑* to move it, with *Undo* in the corner. Delete asks in a dialog with Cancel selected, and
-  nothing ever replaces an existing file.
+- **Swipe to scroll on a phone.** A swipe on the terminal scrolls tmux, vim or less, like a mouse wheel.
+  Before, swiping did nothing inside tmux.
+- **The keyboard no longer hides the prompt on a phone.** The terminal shrinks to fit above the on-screen
+  keyboard, so the line you type stays in view. This matters most on iPhone.
+- **File panel**, laid out like VS Code's Explorer. Press *Files* in the terminal's top bar. Folders expand in
+  place, a double-click downloads, and the hover icon types a file's path into the terminal. The panel opens
+  in the terminal's folder. *⋯* has *Show hidden files*, *Home folder*, *The terminal's folder* and *Open
+  folder…*. Everything runs as the mapped Linux user through `setpriv`.
+- **Uploads like VS Code.** Paste a screenshot anywhere on the page, or drop files or folders on the terminal.
+  They are saved and their paths are typed into the terminal. A drop on the panel uploads into the folder under
+  the pointer. Duplicates offer *Replace*, *Keep both* or *Skip*. The progress message shows a thumbnail and
+  can cancel. Uploads are capped by `MAX_UPLOAD_MB`, 100 MB by default, which is Cloudflare's free-plan limit.
+- **Rename, move and delete** in the file panel. Right-click a row or press *⋯* for *Download*, *Insert path
+  into terminal*, *Copy path*, *Rename…*, *Move to…* and *Delete*. Drag a row onto a folder, a path crumb or
+  *↑* to move it, with *Undo* in the corner. Delete asks first, with Cancel selected. Nothing ever replaces an
+  existing file.
+- **A simpler terminal page.** One slim bar on top holds *Sessions*, the session name, a connection dot,
+  *Files* and log out, so the terminal gets the room. Drag the splitter to resize the file panel, double-click
+  to reset, or use the arrow keys. The width is remembered. On a phone the panel covers the terminal and menus
+  slide up from the bottom.
+- **A refreshed dashboard** in the same dark style, with your name and email next to *Log out*.
 - **The `cloudflare-tmux` command**, linked into `~/.local/bin` by the installer: `status` (is it online?),
   `people`, `add`, `remove`, `config`, `logs`, `restart` and `doctor`. One command to learn, whichever install
   you have. Output is colored on a terminal and plain when piped or with `NO_COLOR`.
@@ -33,6 +34,9 @@
 - **One command to add or remove a person**: `cloudflare-tmux add carol@example.com carol` updates
   `IDENTITIES`, the Access policy and the running app. It offers to switch to the multi-user install when the
   Linux user isn't your own. `remove` locks someone out without a token. `list` shows who may log in.
+- **Docs**: new screenshots of the dashboard, the terminal, the file panel, its menu and a phone. The docs
+  site's front page shows the app instead of installer output. A new *On a phone* section covers swiping,
+  the keyboard and the key bar.
 - **Docs: a single [Add a person](docs/content/add-a-person.md) page** with the exact dashboard steps, the token
   recipe, the command, and what the new person sees. The multi-user install is no longer a choice to make up
   front: the installer asks when it's needed.

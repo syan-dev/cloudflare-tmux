@@ -19,11 +19,11 @@
 ---
 
 <p align="center">
-  <img src="docs/public/assets/img/terminal.png" alt="A tmux session open in the browser" width="49%">
-  <img src="docs/public/assets/img/dashboard.png" alt="The session dashboard" width="49%">
+  <img src="docs/public/assets/img/files.png" alt="The terminal in a browser, with the file panel open beside it after pasting a screenshot">
 </p>
 <p align="center">
-  <img src="docs/public/assets/img/files.png" alt="The file panel beside the terminal: browse folders, download, upload by drag and drop, or paste a screenshot" width="80%">
+  <img src="docs/public/assets/img/dashboard.png" alt="The dashboard: your tmux sessions, with Open, Rename and Kill" width="70%">
+  <img src="docs/public/assets/img/phone.png" alt="The terminal on a phone, with the key bar for Esc, Tab, Ctrl and arrows" width="23.5%">
 </p>
 
 ## What you get
@@ -32,7 +32,9 @@
 - **No open ports.** Your server connects out to Cloudflare. It works behind NAT and CGNAT.
 - **Sign in with your Cloudflare account.** Only the people you list get in.
 - **Sessions keep running** when you close the tab. It's real tmux, so `tmux attach` works on the server too.
-- **Files too.** Browse folders, download, drop files or folders in. Paste a screenshot and its path is typed for you.
+- **Files beside the terminal.** A panel like VS Code's: browse, download, rename, move and delete.
+- **Upload by drop or paste.** Drop files on the terminal, or paste a screenshot. Its path is typed for you.
+- **Works on phones.** Swipe to scroll. A key bar adds Esc, Tab, Ctrl and arrows.
 - **One command to set up.** `./install.sh` does the Cloudflare side and installs the services.
 
 ## How it works

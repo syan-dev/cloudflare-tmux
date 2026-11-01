@@ -1,29 +1,33 @@
 ---
 title: Using it
-description: Using the session dashboard, the terminal, the mobile key bar, and tmux itself.
+description: The session dashboard, the terminal, copy and paste, the file panel, phones, and tmux itself.
 ---
 
 # Using it
 
 ## Dashboard
 
-Opening your hostname shows the **dashboard**: every tmux session of your Linux user, most recently active
-first.
+Opening your hostname shows the **dashboard**. It lists every tmux session of your Linux user, most recently
+active first. Your name and email are at the top right, next to **Log out**.
+
+![The dashboard: your sessions, with Open, Rename and Kill](assets/img/dashboard.png)
 
 - **New session**: type a name and press *New session*. Names take letters, digits, `_` and `-`, up to 32
   characters. You're attached right away.
 - **Open**: attach to a session. A green dot means another client is attached too, such as another tab,
   another device or a local `tmux attach`.
 - **Rename** and **Kill**: rename the session, or end it and everything running in it.
-- **Log out**: ends your Cloudflare Access session.
+- **Log out**: ends your Cloudflare login.
 
 Sessions have links: `https://term.example.com/#/s/work` opens the session `work`, creating it if needed.
 
 ## Terminal
 
+![A tmux session in the browser, under one slim top bar](assets/img/terminal.png)
+
 - The bar at the top shows the session's name and a dot. Green means connected. Yellow means it is
   reconnecting, with a word on what is happening.
-- **Sessions** at the top left goes back to the dashboard. The session keeps running.
+- **Sessions**, the ☰ at the top left, goes back to the dashboard. The session keeps running.
 - **Files** at the top right opens the file panel. The person icon logs you out.
 - If the connection drops, after a Wi-Fi change or laptop sleep, the page **reconnects by itself**. If your
   Access login has expired, it reloads so you can sign in again.
@@ -75,6 +79,8 @@ resize.
 
 Right-click a row, or press its **⋯**, for a menu. On a phone the menu slides up from the bottom.
 
+![The row menu: Download, Insert path, Copy path, Rename, Move to and Delete](assets/img/menu.png)
+
 - **Rename…** turns the name into a text box. Enter saves, Escape cancels.
 - **Move** by dragging a row onto a folder, onto a part of the path, or onto **↑**. The message in the corner
   has an **Undo** button. **Move to…** asks for a folder instead, for phones and far-away folders.
@@ -104,9 +110,16 @@ whether to **Replace** it, **Keep both** as `name (2).ext`, or **Skip**. Dropped
 The file panel runs as your Linux user, so you see exactly what `ls` would show you. Uploads are limited to
 `MAX_UPLOAD_MB`, 100 MB by default, which is also what Cloudflare's free plan allows per request.
 
-## Mobile key bar
+## On a phone
 
-On touch devices a key bar appears under the terminal:
+<img src="assets/img/phone.png" width="300" alt="The terminal on a phone, with the key bar at the bottom">
+
+The terminal works on a phone too. Three things help.
+
+- **Swipe to scroll.** Swipe up or down on the terminal. It scrolls tmux, vim or less, like a mouse wheel.
+  A quick flick keeps scrolling for a moment.
+- **The prompt stays in view.** When the keyboard opens, the terminal shrinks to fit above it.
+- **A key bar** sits under the terminal:
 
 | Key | Sends |
 |---|---|
@@ -115,6 +128,8 @@ On touch devices a key bar appears under the terminal:
 | ^B | the tmux prefix, `Ctrl-b` |
 | ↑ ↓ ← → | arrow keys |
 | \| ~ | characters that are awkward on phone keyboards |
+
+The file panel covers the whole screen on a phone. Close it with **×** to get back to the terminal.
 
 ## tmux basics
 
@@ -134,6 +149,8 @@ For mouse-wheel scrolling, add this to `~/.tmux.conf`, then run `tmux source ~/.
 ```bash
 set -g mouse on
 ```
+
+With `mouse on`, a swipe on a phone scrolls tmux's history too. Swipe back to the bottom to leave scroll mode.
 
 ## Same sessions from the server
 

@@ -8,18 +8,15 @@ description: A terminal on your own Linux server, in any browser, protected by y
 **cloudflare-tmux** gives you a terminal on your own Linux machine from any browser, including your phone.
 You sign in with your Cloudflare account. Your programs keep running when you close the tab.
 
-![A tmux session open in the browser](assets/img/terminal.png)
-
 ## Why people use it
 
 - **No open ports.** Your server connects out to Cloudflare. No port forwarding, public IP or firewall rules.
 - **Sign in with Cloudflare.** A login page stands in front. Only the people you list get through.
 - **Sessions survive.** Every terminal is a real tmux session. Lose Wi-Fi, switch devices, come back later.
-- **Files too.** Browse folders, download a file, drop files or folders in. Paste a screenshot and its path is typed for you.
-- **Works on phones.** A key bar adds Esc, Tab, Ctrl, arrows and the tmux prefix on touch screens.
+- **Files beside the terminal.** A panel like VS Code's: browse, download, rename, move and delete.
+- **Upload by drop or paste.** Drop files on the terminal, or paste a screenshot. Its path is typed for you.
+- **Works on phones.** Swipe to scroll, and a key bar adds Esc, Tab, Ctrl, arrows and the tmux prefix.
 - **One command for everything.** `./install.sh` sets it up. `cloudflare-tmux` runs it day to day.
-
-![The file panel beside the terminal: browse folders, download, upload by drag and drop, or paste a screenshot](assets/img/files.png)
 
 ## How it works
 
@@ -37,9 +34,9 @@ your server, which opens your tmux session. Your server never listens on the int
 2. **[Install](quickstart.md)**: clone, create one API token, run `./install.sh`. About five minutes.
 3. **[Add a person](add-a-person.md)**: one invite in the Cloudflare dashboard and one command.
 
-Then see [Using it](usage.md) for the dashboard, the terminal, copy and paste, files, and the phone key bar.
+Then see [Using it](usage.md) for the dashboard, the terminal, copy and paste, files, and phones.
 
-![The session dashboard: create, open, rename and kill sessions](assets/img/dashboard.png)
+![The dashboard: create, open, rename and kill sessions](assets/img/dashboard.png)
 
 ## Day to day
 

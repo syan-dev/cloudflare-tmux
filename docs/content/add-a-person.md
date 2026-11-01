@@ -97,7 +97,7 @@ them as Accepted. Once they log in, `LAST LOGIN` fills in and you know the whole
 
 ## 5. Send them the link
 
-Send them `https://term.example.com` and the [Usage](usage.md) page. Here is what they see:
+Send them `https://term.example.com` and the [Using it](usage.md) page. Here is what they see:
 
 1. Cloudflare's login page with one button, **Sign in with Cloudflare**. They sign in with their own account.
 2. The dashboard, empty at first. They type a name and click **New session**.

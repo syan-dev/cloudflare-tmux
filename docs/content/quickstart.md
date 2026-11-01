@@ -78,7 +78,7 @@ cloudflare-tmux doctor                       # something wrong? it tells you the
 ## Next
 
 - **Add people.** One invite in the Cloudflare dashboard and one command. See [Add a person](add-a-person.md).
-- **Learn the screen.** [Using it](usage.md) covers the dashboard, copy and paste, and the phone key bar.
+- **Learn the screen.** [Using it](usage.md) covers the dashboard, the terminal, files and phones.
 - **Something wrong?** Run `cloudflare-tmux doctor`, then see [Troubleshooting](troubleshooting.md).
   Re-running `./install.sh` is always safe.
 - **Later: secure it further.** Your Cloudflare account is now a key to a shell. The
